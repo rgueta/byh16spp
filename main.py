@@ -1,3 +1,4 @@
+import machine
 from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM
 import os
 import uasyncio
@@ -8,15 +9,25 @@ import utime
 import magnet
 import gate
 import initSetup
+# import time
 
-# --------  Setup config json file  ------------------
+# region --------  Setup config json file  ------------------
 
 conf = open('config.json')
 config = json.loads(conf.read())
 conf.close()
+# endregion ----------------
+
+# region --------  Setup Events json file  ------------------
+
+event = open('events.json')
+events_log = json.loads(event.read())
+event.close()
+# endregion ----------------
 
 # region ------     Variables     ------------------
 # wait until gsm device connect to network
+
 utime.sleep(14)
 # -------------------------------------
 
@@ -28,7 +39,7 @@ emptyTuple = ()
 Today = ''
 gsm_status = []
 sendStatus = False
-active_codes = []
+active_codes = {"codes": []}
 show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
 
@@ -93,7 +104,8 @@ col_pins = [Pin(pin_name, pull=Pin.PULL_DOWN) for pin_name in COLS]
 # region ------------ SIM800L  -----------------------
 
 send_code_events = config['sim']['send_code_events']
-admin_sim = config['app']['admin_sim']
+admin_sim = config['app']['admin_sim'].split(',')
+
 app_version = config['app']['app_version']
 apn = config['sim']['apn']
 url = config['sim']['url'] + config['sim']['api_elerts'] + config['app']['pedestrian_alert_msg'] + '/' + config['sim'][
@@ -133,15 +145,16 @@ def initial():
     # cleanup expired codes
     utime.sleep(5)
 
-    if tupleToday == emptyTuple:
-        print('tupleToday esta VACIO', tupleToday)
-        Exceptions = Exceptions + '1,'
-        displayErrors()
-    #     cleanCodes(1,'')
-    else:
-        cleanCodes(1, '')
+    # if tupleToday == emptyTuple:
+    #     print('tupleToday esta VACIO', tupleToday)
+    #     Exceptions = Exceptions + '1,'
+    #     displayErrors()
+    # #     cleanCodes(1,'')
+    # else:
+    #     cleanCodes(1, '')
 
-    # print('Tuple GSM today -->', tupleToday)
+    cleanCodes(1, '')
+
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
     oled1.text(Today[-2:], 45, 0)
@@ -180,6 +193,32 @@ def InitKeypad():
             row_pins[row].low()
 
 
+def unblockUser(uuid):
+    jaccess = open("restraint.json", "r")
+    restraint_list = json.loads(jaccess.read())
+    jaccess.close()
+
+    for i, item in enumerate(restraint_list['user']):
+        if item['uuid'] == uuid:
+            del restraint_list['user'][i]
+            print('Dar acceso a este usuario ' + item['name'])
+            f = open("restraint.json","w")
+            json.dump(restraint_list, f)
+            f.close()
+            break
+
+def verifyRestraint(uuid):
+    exists = False
+    jaccess = open('restraint.json')
+    restraint_list = json.loads(jaccess.read())
+    jaccess.close()
+    for i, item in enumerate(restraint_list['user']):
+        if item['uuid'] == uuid:
+            print('Ya existe este usuario')
+            exists = True
+            break
+    return exists
+
 def insertJson(pkg, file):
     global jcodes
     global code_list
@@ -189,8 +228,10 @@ def insertJson(pkg, file):
             file_data = json.load(jsonFile)
             if file == 'codes.json':
                 file_data['codes'].append(pkg)
-            elif file == 'access.json':
-                file_data['access'].append(pkg)
+            elif file == 'restraint.json':
+                file_data['user'].append(pkg)
+            elif file == 'events.json':
+                file_data['events'].append(pkg)
         f = open(file, "w")
         json.dump(file_data, f)
         f.close()
@@ -202,7 +243,6 @@ def insertJson(pkg, file):
     except FileNotFoundError as exc:  # create file not exists
         print('InsertJson Error --> ', FileNotFoundError)
         pass
-
 
 def tupleDateFROM_ISO(d):  # get just date from ISO datetime format '2022-01-05T10:53:13.00'
     tPosition = d.index('T')
@@ -220,25 +260,34 @@ def daysBetween(d1, d2):
 # region -----------  codes  --------------------
 # ---  1 : by date, 2 : by duplicity
 def cleanCodes(type, code):
+    global active_codes
+    active_codes = {"codes": []}
+
+    now = utime.time()  # create timestamp from rtc local
     jcodes = open('codes.json')
     code_list = json.loads(jcodes.read())
     jcodes.close()
+
     for i, item in enumerate(code_list['codes']):
         if type == 1:
-            days_between = daysBetween(tupleDateFROM_ISO(item['date']), tupleToday)
-            print('code --> ' + item['code'] +
-                  ', date: ' + item['date'] + ', daysBetweeb --> ', days_between)
-            if days_between < 0:
-                print('Should delete --> ', item['code'])
-                del code_list['codes'][i]
+            dtcode = utime.mktime((2000 + int(item['date'][2:4]), int(item['date'][5:7]),
+                                  int(item['date'][8:10]), int(item['date'][11:13]),
+                                  int(item['date'][14:16]), int(item['date'][17:19]),
+                                  0,0))
 
-                f = open("codes.json", "w")
-                json.dump(code_list, f)
-                f.close()
+            if dtcode < now :
+            # instead of days_between check it out
+            # days_between = daysBetween(tupleDateFROM_ISO(item['date']), tupleToday)
+            # print('code --> ' + item['code'] +
+            #       ', date: ' + item['date'] + ', daysBetweeb --> ', days_between)
+            # if days_between < 0:
+
+                # del code_list['codes'][i]
+
+                print('Code deleted --> ', item['code'])
             else:
-                active_codes.append({'userId': str(item['userId'], encoding),
-                                     'code': str(item['code'], encoding).upper(),
-                                     'codeId': str(item['codeId'], encoding)})
+                print('--- adding code to active_codes ------> ' + str(item['code']))
+                active_codes['codes'].append(item)
 
         elif type == 2:
             if code == item['code']:
@@ -247,10 +296,14 @@ def cleanCodes(type, code):
                 json.dump(code_list, f)
                 f.close()
                 break
+    f = open("codes.json", "w")
+    json.dump(active_codes, f)
+    f.close()
 
 
 def verifyCode(code):
-    for i, item in enumerate(active_codes):
+    global active_codes
+    for i, item in enumerate(active_codes['codes']):
         if code == item['code']:
             print('codigo valido..! userId : ' + str(item['userId']))
             song('ok')
@@ -260,6 +313,16 @@ def verifyCode(code):
                 # reg_code_event(code)
                 reg_code_event_json(str(item['codeId']))
                 print('Call API to store code event')
+            else:
+                event_pkg = {"codeId":str(item['codeId']),"picId":"NA",
+                             "CoreSim":config['sim']['value'],"timestamp":
+                             rtc.datetime()}
+
+                insertJson(event_pkg,'events.json')
+                # gsm.write('AT+CCLK?\r\n')
+                utime.sleep(1)
+
+                print('event registered locally')
             break
 
         elif i + 1 == len(active_codes):
@@ -272,8 +335,6 @@ def verifyCode(code):
             oled1.text("Codigo: " + code_hide, 1, 22)
             warning_message_active = True
             song('fail')
-
-
 
 
 def reg_code_event(code_id):
@@ -433,18 +494,18 @@ def PollKeypad(timer):
                         verifyCode(code)
                     elif len(code) > 0:
                         oled1.fill(0)
-                        #                         oled1.text("* Borrar      #Enter",1,0)
-                        #                         oled1.text(Today,64,0)
+                        #oled1.text("* Borrar      #Enter",1,0)
+                        #oled1.text(Today,64,0)
                         printHeader()
                         oled1.text('Incompleto', 5, 22)
                         oled1.show()
                         song('fail')
 
                         utime.sleep(3)
-                        #                         oled1.fill(0)
-                        #                         oled1.text("* Borrar      #Enter",1,0)
+                        #oled1.fill(0)
+                        #oled1.text("* Borrar      #Enter",1,0)
                         printHeader()
-                        #                         oled1.text(Today,64,0)
+                        #oled1.text(Today,64,0)
                         if show_code:
                             oled1.text("Codigo: " + code, 1, 22)
                         else:
@@ -485,6 +546,13 @@ def printHeader():
 
 #   oled1.text(Today,64,0)
 
+def getLocalTimestamp():
+    ts = RTC().datetime()
+    tsf = ((str(ts[0]) + '-' + str(ts[1]) + '-' +
+            str(ts[2]) + 'T' + str(ts[4]) + ':' +
+            str(ts[5]) + ':' + str(ts[6])))
+    return tsf
+
 def simResponse(timer):
     # def simResponse():
     global tupleToday
@@ -522,6 +590,21 @@ def simResponse(timer):
             pos = response.index(':')
             timestamp = response[pos + 3: len(response)]
             if debugging:
+                print('GSM timestamp --> ' + timestamp)
+                print(('Params --> ', timestamp[0:2],timestamp[3:5],
+                       timestamp[6:8],timestamp[9:11],timestamp[12:14],
+                       timestamp[15:17]))
+
+                rtc.datetime((2000 + int(timestamp[0:2]), int(timestamp[3:5]),
+                              int(timestamp[6:8]), 0,int(timestamp[9:11]),
+                              int(timestamp[12:14]),int(timestamp[15:17]),0))
+
+                # rtc_timestamp = rtc.datetime()
+                print('rtc_datetime --> ' + str(rtc.datetime()))
+                # print('GMS timestamp formated --> ' + rtc_timestamp)
+                # t1 = datetime.strptime(timestamp_formated, "%y-%m-%dT%H:%M:%S")
+                # print('T1 --> ', str(t1))
+
                 timestamp = timestamp.split(',')[0].split('/')
                 tupleToday = (int(timestamp[0]), int(timestamp[1]), int(timestamp[2]))
                 Today = timestamp[0] + '.' + timestamp[1] + '.' + timestamp[2]
@@ -548,17 +631,20 @@ def simResponse(timer):
                 insertJson(api_data, 'codes.json')
                 cleanCodes(1, '')
 
-            #                 # ----- Update available codes  -----
-            #                 codesAvailable()
-            #                 sendCodeToVisitor(msg[1],msg[4])
+                # ----- Update available codes  -----
+                #codesAvailable()
+                #sendCodeToVisitor(msg[1],msg[4])
 
             elif msg[0].strip() == 'blocked':
-                api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                            "sim": msg[5].rstrip('\r\n'), "date": Today}
-                insertJson(api_data, 'access.json')
+                if not verifyRestraint(msg[4]):
+                    api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
+                                "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+                                "local": getLocalTimestamp()}
+                    insertJson(api_data, 'restraint.json')
             elif msg[0].strip() == 'unblocked':
                 api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                            "sim": msg[5].rstrip('\r\n'), "date": Today}
+                            "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+                            "date": getLocalTimestamp()}
                 unblockUser(msg[4])
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
@@ -596,12 +682,13 @@ def simResponse(timer):
 
             if sendStatus:
                 sendStatus = False
+                gsm_status.append({'Local': getLocalTimestamp()})
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
-                        + '\n Access: ' + pkgListAccess())
+                        + '\n blocked: ' + pkgListAccess())
 
             elif debugging:
                 print('CBC : ', response_return)
@@ -641,22 +728,42 @@ def signal_Status():
 
 
 def UserIsBlocked(uuid):
-    access_list = {}
-    jaccess = open("access.json", "r")
-    access_list = json.loads(jaccess.read())
-    for i, item in enumerate(access_list['access']):
+    restraint_list = {}
+    jaccess = open("restraint.json", "r")
+    restraint_list = json.loads(jaccess.read())
+    for i, item in enumerate(restraint_list['user']):
         if (uuid.strip() == item['uuid']):
             return True
     return False
 
 
+
+
 def sendSMS(msg):
-    gsm.write('AT+CMGS="' + str(admin_sim, encoding) + '"\r')
-    utime.sleep(0.5)
-    gsm.write(str(msg) + "\r")
-    utime.sleep(0.5)
-    gsm.write(chr(26))
-    utime.sleep(0.5)
+    for i, item in enumerate(admin_sim):
+        print('sent sms to ' + item)
+        utime.sleep(1)
+        gsm.write('AT+CMGS="' + item + '"\r\n')
+        utime.sleep(1)
+        gsm.write(str(msg) + "\r\n")
+
+        gsm.write('\x1A')  # Enable to send SMS
+        utime.sleep(1)
+        # gsm.write(chr(26))
+        # utime.sleep(0.5)
+
+
+    # for i, item in enumerate(admin_sim):
+    #     print('sent sms to ' + item)
+    #     utime.sleep(1)
+    #     gsm.write('AT+CMGS="' + str(item, encoding) + '"\r')
+    #     utime.sleep(1)
+    #     gsm.write(str(msg) + "\r")
+    #
+    #     # gsm.write('\x1A')  # Enable to send SMS
+    #     utime.sleep(1)
+    #     gsm.write(chr(26))
+    #     utime.sleep(0.5)
 
 
 def displayErrors():
@@ -676,16 +783,17 @@ def getBoardTemp():
 
 def pkgListCodes():
     global codes
+    global active_codes
     codes = ''
-    for i, item in enumerate(code_list['codes']):
+    for i, item in enumerate(active_codes['codes']):
         codes = codes + item['code'] + ','
     return codes
 
 def pkgListAccess():
     global access
     access = ''
-    for i, item in enumerate(access_list['access']):
-        access = access + item['name'] + ','
+    for i, item in enumerate(restraint_list['access']):
+        access = access + item['name'] + '-[' + item['house'] + '],'
     return access
 
 # --- Verify if sim card is inserted ---
@@ -715,8 +823,8 @@ except OSError:  # Open failed
 
 
 try:
-    jaccess = open('access.json')
-    access_list = json.loads(jaccess.read())
+    jaccess = open('restraint.json')
+    restraint_list = json.loads(jaccess.read())
 
 except OSError:  # Open failed
     print('Error--> ', OSError)
@@ -781,6 +889,7 @@ else:
     rtc_date = RTC().datetime()
 
     initial()
+    print('Time after --> ' + str(utime.time()))
     song('initial')
 
 
