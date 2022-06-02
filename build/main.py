@@ -506,8 +506,8 @@ def PollKeypad(timer):
                 key = KEY_UP
             row_pins[row].low()
             if key == KEY_DOWN:
-                if MATRIX[row][col] == '*' and code != '00':
-                    if len(code) > 0:
+                if MATRIX[row][col] == '*':
+                    if (len(code) > 0):
                         code = code[0:-1]
                         code_hide = code_hide[0:-1]
                 elif MATRIX[row][col] == '#':
@@ -515,10 +515,7 @@ def PollKeypad(timer):
                         my_timer = 0
                         cleanCodes(1, '')
                         verifyCode(code)
-                    elif code == '00*': # RESET
-                        print('--- Soft reset ---')
-                        machine.reset()
-                    elif len(code) > 0 and code != '00*':
+                    elif len(code) > 0:
                         oled1.fill(0)
                         #oled1.text("* Borrar      #Enter",1,0)
                         #oled1.text(Today,64,0)
@@ -661,13 +658,13 @@ def simResponse(timer):
                 #codesAvailable()
                 #sendCodeToVisitor(msg[1],msg[4])
 
-            elif msg[0].strip() == 'locked':
+            elif msg[0].strip() == 'blocked':
                 if not verifyRestraint(msg[4]):
                     api_data = { "name": msg[1], "email": msg[2], "uuid": msg[3],
                                 "house": msg[4].rstrip('\r\n'),
                                 "local": getLocalTimestamp()}
                     insertJson(api_data, 'restraint.json')
-            elif msg[0].strip() == 'unlocked':
+            elif msg[0].strip() == 'unblocked':
                 api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
                             "house": msg[4].rstrip('\r\n'),
                             "date": getLocalTimestamp()}
