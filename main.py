@@ -240,6 +240,7 @@ def verifyRestraint(uuid):
 def insertJson(pkg, file):
     global jcodes
     global code_list
+    global restraint_list
     try:  # if os.path.exists(file):
         with open(file, 'r+', encoding='utf8') as jsonFile:
             #     # First we load existing data into a dict.
@@ -257,6 +258,10 @@ def insertJson(pkg, file):
             jcodes = open('codes.json')
             code_list = json.loads(jcodes.read())
             jcodes.close()
+        elif file == 'restraint.json':
+            jfiles = open('restraint.json')
+            restraint_list = json.loads(jfiles.read())
+            jfiles.close()
 
     except FileNotFoundError as exc:  # create file not exists
         print('InsertJson Error --> ', FileNotFoundError)
@@ -655,15 +660,15 @@ def simResponse(timer):
 
             elif msg[0].strip() == 'blocked':
                 if not verifyRestraint(msg[4]):
-                    api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                                "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+                    api_data = { "name": msg[1], "email": msg[2], "uuid": msg[3],
+                                "house": msg[4].rstrip('\r\n'),
                                 "local": getLocalTimestamp()}
                     insertJson(api_data, 'restraint.json')
             elif msg[0].strip() == 'unblocked':
-                api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                            "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+                api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
+                            "house": msg[4].rstrip('\r\n'),
                             "date": getLocalTimestamp()}
-                unblockUser(msg[4])
+                unblockUser(msg[3])
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
