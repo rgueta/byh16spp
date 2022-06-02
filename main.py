@@ -192,21 +192,6 @@ def InitKeypad():
         for col in range(0, 4):
             row_pins[row].low()
 
-
-def unblockUser(uuid):
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
-
-    for i, item in enumerate(restraint_list['user']):
-        if item['uuid'] == uuid:
-            del restraint_list['user'][i]
-            print('Dar acceso a este usuario ' + item['name'])
-            f = open("restraint.json","w")
-            json.dump(restraint_list, f)
-            f.close()
-            break
-
 def verifyRestraint(uuid):
     exists = False
     jaccess = open('restraint.json')
@@ -219,9 +204,27 @@ def verifyRestraint(uuid):
             break
     return exists
 
+def unlockUser(uuid):
+    global restraint_list
+    jaccess = open("restraint.json", "r")
+    restraint_list = json.loads(jaccess.read())
+    jaccess.close()
+    for i, item in enumerate(restraint_list['user']):
+        if item['uuid'] == uuid:
+            del restraint_list['user'][i]
+            f = open("restraint.json","w")
+            json.dump(restraint_list, f)
+            f.close()
+            utime.sleep(0.6)
+            jfile = open("restraint.json", "r")
+            restraint_list = json.loads(jfile.read())
+            jfile.close()
+            break
+
 def insertJson(pkg, file):
-    global jcodes
+    # global jcodes
     global code_list
+    global restraint_list
     try:  # if os.path.exists(file):
         with open(file, 'r+', encoding='utf8') as jsonFile:
             #     # First we load existing data into a dict.
@@ -236,9 +239,13 @@ def insertJson(pkg, file):
         json.dump(file_data, f)
         f.close()
         if file == 'codes.json':
-            jcodes = open('codes.json')
-            code_list = json.loads(jcodes.read())
-            jcodes.close()
+            jfile = open('codes.json')
+            code_list = json.loads(jfile.read())
+            jfile.close()
+        elif file == 'restraint.json':
+            jfile = open('restraint.json')
+            restraint_list = json.loads(jfile.read())
+            jfile.close()
 
     except FileNotFoundError as exc:  # create file not exists
         print('InsertJson Error --> ', FileNotFoundError)
@@ -635,17 +642,17 @@ def simResponse(timer):
                 #codesAvailable()
                 #sendCodeToVisitor(msg[1],msg[4])
 
-            elif msg[0].strip() == 'blocked':
-                if not verifyRestraint(msg[4]):
-                    api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                                "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+            elif msg[0].strip() == 'locked':
+                if not verifyRestraint(msg[3]):
+                    api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
+                                "house": msg[4].rstrip('\r\n'),
                                 "local": getLocalTimestamp()}
                     insertJson(api_data, 'restraint.json')
-            elif msg[0].strip() == 'unblocked':
-                api_data = {"userId": msg[1], "name": msg[2], "email": msg[3], "uuid": msg[4],
-                            "sim": msg[5], "house": msg[6].rstrip('\r\n'),
+            elif msg[0].strip() == 'unlocked':
+                api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
+                            "house": msg[4].rstrip('\r\n'),
                             "date": getLocalTimestamp()}
-                unblockUser(msg[4])
+                unlockUser(msg[3])
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
@@ -792,7 +799,7 @@ def pkgListCodes():
 def pkgListAccess():
     global access
     access = ''
-    for i, item in enumerate(restraint_list['access']):
+    for i, item in enumerate(restraint_list['user']):
         access = access + item['name'] + '-[' + item['house'] + '],'
     return access
 
