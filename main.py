@@ -515,23 +515,20 @@ def PollKeypad(timer):
                         my_timer = 0
                         cleanCodes(1, '')
                         verifyCode(code)
-                    elif code == '00*': # RESET
+                    elif code == '00*': # SOFT RESET
                         print('--- Soft reset ---')
                         machine.reset()
+                    elif len(code) > 0 and code == '00*0':
+                        code = code_hide = ''
+                        oled1.text("Codigo: ", 1, 22)
                     elif len(code) > 0 and code != '00*':
                         oled1.fill(0)
-                        #oled1.text("* Borrar      #Enter",1,0)
-                        #oled1.text(Today,64,0)
                         printHeader()
                         oled1.text('Incompleto', 5, 22)
                         oled1.show()
                         song('fail')
-
                         utime.sleep(3)
-                        #oled1.fill(0)
-                        #oled1.text("* Borrar      #Enter",1,0)
                         printHeader()
-                        #oled1.text(Today,64,0)
                         if show_code:
                             oled1.text("Codigo: " + code, 1, 22)
                         else:
@@ -539,7 +536,6 @@ def PollKeypad(timer):
                         oled1.show()
                         warning_message_active = True
                         break
-
                     code = code_hide = ''
                 else:
                     code = code + MATRIX[row][col]
@@ -548,8 +544,6 @@ def PollKeypad(timer):
                 oled1.text("* <-", 1, 0)
                 oled1.text(Today[-2:], 45, 0)
                 oled1.text('# enter', 75, 0)
-                #                     printHeader()
-                #                 oled1.text(Today,64,0)
                 if show_code:
                     oled1.text("Codigo: " + code, 1, 22)
                 else:
@@ -558,7 +552,8 @@ def PollKeypad(timer):
                     oled1.text('..', 1, 9)
                 oled1.show()
                 last_key_press = MATRIX[row][col]
-                print("Codigo:" + code)
+                if debugging:
+                    print("Codigo:" + code)
 
 
 def printHeader():
@@ -601,6 +596,7 @@ def simResponse(timer):
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
             pos = response.index(':')
             simStatus = response[pos + 4: len(response)]
+            print('sim status --> ' + simStatus)
             return simStatus
             # if simStatus == "0":
             #     if debugging:
@@ -617,13 +613,9 @@ def simResponse(timer):
             timestamp = response[pos + 3: len(response)]
             if debugging:
                 print('GSM timestamp --> ' + timestamp)
-                print(('Params --> ', timestamp[0:2],timestamp[3:5],
+                print(('Params --> ' ,timestamp[0:2],timestamp[3:5],
                        timestamp[6:8],timestamp[9:11],timestamp[12:14],
                        timestamp[15:17]))
-
-                rtc.datetime((2000 + int(timestamp[0:2]), int(timestamp[3:5]),
-                              int(timestamp[6:8]), 0,int(timestamp[9:11]),
-                              int(timestamp[12:14]),int(timestamp[15:17]),0))
 
                 # rtc_timestamp = rtc.datetime()
                 print('rtc_datetime --> ' + str(rtc.datetime()))
@@ -631,10 +623,14 @@ def simResponse(timer):
                 # t1 = datetime.strptime(timestamp_formated, "%y-%m-%dT%H:%M:%S")
                 # print('T1 --> ', str(t1))
 
-                timestamp = timestamp.split(',')[0].split('/')
-                tupleToday = (int(timestamp[0]), int(timestamp[1]), int(timestamp[2]))
-                Today = timestamp[0] + '.' + timestamp[1] + '.' + timestamp[2]
-                print('GSM Net Timestamp: ', tupleToday)
+            timestamp = timestamp.split(',')[0].split('/')
+            tupleToday = (int(timestamp[0]), int(timestamp[1]), int(timestamp[2]))
+            Today = timestamp[0] + '.' + timestamp[1] + '.' + timestamp[2]
+            print('GSM Net Timestamp: ', tupleToday)
+
+            rtc.datetime((2000 + int(timestamp[0:2]), int(timestamp[3:5]),
+                          int(timestamp[6:8]), 0, int(timestamp[9:11]),
+                          int(timestamp[12:14]), int(timestamp[15:17]), 0))
 
         # SMS----------------------
         elif '+CMT:' in response:

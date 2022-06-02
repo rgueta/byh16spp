@@ -12,7 +12,7 @@
 		"timeZone" : "America/Tijuana",
 		"dateTimeFormat" : "%Y-%m-%d %H:%M:%S",
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
-		"debugging": true,
+		"debugging": false,
 		"show_code": true,
 		"demo" : true
 
