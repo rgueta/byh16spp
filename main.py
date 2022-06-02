@@ -118,6 +118,7 @@ api_get_line = config['sim']['api_get_line']
 
 APN_USER = 'AT+SAPBR=3,1,"USER","%s"\r' % config['sim']['APN_USER']
 APN_PWD = 'AT+SAPBR=3,1,"PWD","%s"\r' % config['sim']['APN_PWD']
+incoming_calls = config['sim']['incoming_calls']
 
 # initial gprs configuration
 def gsm_config_gprs():
@@ -167,6 +168,23 @@ def initial():
 
     gsm_config_gprs()
 
+
+def init_gsm():
+    # gsm.write('ATE0\r')    # Disable the Echo
+    # utime.sleep(0.5)
+    gsm.write('AT+CMGF=1\r')  # Select Message format as Text mode
+    utime.sleep(0.6)
+    # print(gsm.read().decode())
+    # sim800()
+    gsm.write('AT+CNMI=1,2,0,0,0\r')  # New SMS Message Indications
+    utime.sleep(0.6)
+
+    # gsm.write('AT+CGATT?\r\n')
+    # utime.sleep(1)
+
+    if(not incoming_calls):
+        gsm.write('AT+GSMBUSY=1\r')
+        utime.sleep(0.6)
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -792,7 +810,7 @@ def pkgListCodes():
 def pkgListAccess():
     global access
     access = ''
-    for i, item in enumerate(restraint_list['access']):
+    for i, item in enumerate(restraint_list['user']):
         access = access + item['name'] + '-[' + item['house'] + '],'
     return access
 
@@ -851,24 +869,9 @@ else:
 
     # Initialize and set all the rows to low
     InitKeypad()
+    #-------  SETUP GSM device  -------------------
+    init_gsm()
 
-    # gsm.write('ATE0\r')    # Disable the Echo
-    # utime.sleep(0.5)
-    gsm.write('AT+CMGF=1\r')  # Select Message format as Text mode
-    utime.sleep(0.6)
-    # print(gsm.read().decode())
-    # sim800()
-    gsm.write('AT+CNMI=1,2,0,0,0\r')  # New SMS Message Indications
-    utime.sleep(0.6)
-
-    # gsm.write('AT+CGATT?\r\n')
-    # utime.sleep(1)
-
-    # print(gsm.read().decode())
-    # sim800()
-
-    # print('Network timestamp: ' + gsm.read().decode())
-    # sim800()
 
     # Initialize timer Used for polling keypad
     timerKeypad = Timer()

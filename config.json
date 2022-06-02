@@ -15,6 +15,7 @@
 		"debugging": true,
 		"show_code": true,
 		"demo" : true
+
 		},
 	"sim":{
 		"value":"+526641942241",
@@ -31,7 +32,8 @@
 		"HTTPACTION_waitTime" : 6,
 		"battery_status_line" : 2,
 		"api_get_line" : 5,
-		"send_code_events" : false
+		"send_code_events" : false,
+		"incoming_calls": false
 
 	},
 	"backup_lines" : {
