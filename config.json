@@ -12,9 +12,10 @@
 		"timeZone" : "America/Tijuana",
 		"dateTimeFormat" : "%Y-%m-%d %H:%M:%S",
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
-		"debugging": false,
+		"debugging": true,
 		"show_code": true,
-		"demo" : true
+		"demo" : true,
+		"pwdRST": "123456"
 
 		},
 	"sim":{
@@ -113,5 +114,3 @@
 		"message" : "Door open from sim800L"
 	}
 }
-
-
