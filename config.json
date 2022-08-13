@@ -1,5 +1,6 @@
 {
 	"app" : {
+		"version": "1.4",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
@@ -22,11 +23,10 @@
 		"value":"+526641942241",
 		"apn": "internet.itelcel.com",
 		"APN_USER" : "webgpr",
-		"APN_PWD" : "",
-		"url__comment": "http,://5b96-2806-1000-8004-3ded-dcee-8ecf-4b8f-c73b.ngrok.io/",
-		"url": "https://byh16n-3-0-0.herokuapp.com/",
+		"APN_PWD" : "webgprs2002",
+		"url": "http://byh16n3.herokuapp.com/",
 		"api_elerts" : "api/alerts/",
-		"api_codes_events" : "api/codeEvent/",
+		"api_codes_events" : "api/codeEvent/new",
 		"serial_port" : "/dev/ttyAMA0",
 		"serial_baud" : 9600,
 		"serial_timeout" : 0.1,

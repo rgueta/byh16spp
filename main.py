@@ -1,15 +1,14 @@
-import machine
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM
-import os
-import uasyncio
+from micropython import const
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset
 import _thread
 from ssd1306 import SSD1306_I2C
+# from umqtt.simple import MQTTClient
 import json
 import utime
 import magnet
 import gate
 import initSetup
-# import time
+
 
 # region --------  Setup config json file  ------------------
 
@@ -24,6 +23,7 @@ event = open('events.json')
 events_log = json.loads(event.read())
 event.close()
 # endregion ----------------
+
 
 # region ------     Variables     ------------------
 # wait until gsm device connect to network
@@ -41,19 +41,21 @@ sendStatus = False
 active_codes = {"codes": []}
 show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
+version_app = config['app']['version']
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
 if debugging:
-    print('Version ..')
+    print('Version ' + version_app)
 initSetup.Initial()
 
 # ------------------ Setup GSM -----------------------
 gsm_tx = config['pi_pins']['gsm_TX']
 gsm_rx = config['pi_pins']['gsm_RX']
+gsm_baud = config['sim']['serial_baud']
 encoding = 'utf-8'
 # gsm = UART(0, 9600, tx=Pin(gsm_tx), rx=Pin(gsm_rx), rxbuf=512)
-gsm = UART(0, 9600, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
+gsm = UART(0, gsm_baud, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
 
 # Setup codes json file
 code_list = {}
@@ -104,19 +106,13 @@ col_pins = [Pin(pin_name, pull=Pin.PULL_DOWN) for pin_name in COLS]
 
 send_code_events = config['sim']['send_code_events']
 admin_sim = config['app']['admin_sim'].split(',')
-
-app_version = config['app']['app_version']
 apn = config['sim']['apn']
-url = config['sim']['url'] + config['sim']['api_elerts'] + config['app']['pedestrian_alert_msg'] + '/' + config['sim'][
-    'value']
+app_version = config['app']['app_version']
 serial_port = config['sim']['serial_port']
 serial_baud = config['sim']['serial_baud']
 serial_timeout = config['sim']['serial_timeout']
 HTTPACTION_waitTime = config['sim']['HTTPACTION_waitTime']
 api_get_line = config['sim']['api_get_line']
-
-APN_USER = 'AT+SAPBR=3,1,"USER","%s"\r' % config['sim']['APN_USER']
-APN_PWD = 'AT+SAPBR=3,1,"PWD","%s"\r' % config['sim']['APN_PWD']
 incoming_calls = config['sim']['incoming_calls']
 
 
@@ -159,15 +155,15 @@ def alterConfig(key1,key2,value):
 # endregion
 
 # initial gprs configuration
-def gsm_config_gprs():
-    print(" --- CONFIG GPRS --- ");
-    gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
-    utime.sleep(1)
-
-    # global keepMonitorSIM800L
-    instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
-    gsm.write(instr.encode())
-    utime.sleep(1)
+# def gsm_config_gprs():
+#     print(" --- CONFIG GPRS --- ");
+#     gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
+#     utime.sleep(1)
+#
+#     # global keepMonitorSIM800L
+#     instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
+#     gsm.write(instr.encode())
+#     utime.sleep(1)
 
 # endregion  -------------------------------------
 
@@ -193,6 +189,7 @@ def ShowMainFrame():
     oled1.text("Codigo: ", 1, 22)
     oled1.show()
 
+
 def initial():
     global sendStatus
     gsm.write('AT+CCLK?\r')
@@ -201,16 +198,25 @@ def initial():
 
     cleanCodes(1, '')
     ShowMainFrame()
-    gsm_config_gprs()
+    # gsm_config_gprs()
 
     # send module status  ---------------
-    if not debugging:
-        sendStatus = True
-        signal_Status('Reboot')
+    sendStatus = True
+    signal_Status('Reboot')
+
 
 def init_gsm():
     # gsm.write('ATE0\r')    # Disable the Echo
     # utime.sleep(0.5)
+    apn_usr = config['sim']['APN_USER']
+    apn_pwd = config['sim']['APN_PWD']
+    gsm.write('AT+CSTT="%s","%s","%s"\r' % (apn,apn_usr,apn_pwd))
+    utime.sleep(1)
+    gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r')
+    utime.sleep(1)
+    gsm.write('AT+SAPBR=3,1,"APN","%s"\r' % apn)
+    utime.sleep(1)
+
     gsm.write('AT+CMGF=1\r')  # Select Message format as Text mode
     utime.sleep(0.6)
     gsm.write('AT+CNMI=1,2,0,0,0\r')  # New SMS Message Indications
@@ -224,9 +230,9 @@ def init_gsm():
         utime.sleep(0.6)
 
 
-
 def softReset():
-    machine.reset()
+    reset()
+
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -408,11 +414,9 @@ def verifyCode(code):
 
 
 def reg_code_event(code_id):
-    local_url = config['sim']['url'] + config['sim']['api_codes_events'] + code_id + '/NA/' + config['sim']['value']
-    # local_url = config['sim']['url'] + config['sim']['api_codes_events']
-
-    print('local_url --> ' + local_url)
-
+    data = {"codeId":code_id, "picId":"NA", "CoreSim":config['sim']['value']}
+    url = config['sim']['url'] + config['sim']['api_codes_events']
+    jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
     # utime.sleep(1)
 
@@ -422,39 +426,51 @@ def reg_code_event(code_id):
     # utime.sleep(1)
 
     # Enable bearer 1.
-    gsm.write('AT+SAPBR=1,1\r\n')
-    utime.sleep(3)
-
-    gsm.write('AT+HTTPTERM\r\n')
-    utime.sleep(1)
-
-    gsm.write('AT+HTTPINIT\r\n')
-    utime.sleep(1)
-
-    gsm.write('AT+HTTPPARA="CID",1\r\n')
-    utime.sleep(1)
-
-    instr = 'AT+HTTPPARA="URL","%s"\r\n' % local_url
-    gsm.write(instr.encode())
-    utime.sleep(2)
-
-    # gsm.write('AT+HTTPPARA="CONTENT","application/json"\r\n')
-    # utime.sleep(1)
 
     gsm.write('AT+HTTPSSL=0\r\n')
-    utime.sleep(0.5)
+    utime.sleep(1)
+
+    gsm.write('AT+HTTPTERM\r')
+    utime.sleep(1)
+
+    gsm.write('AT+SAPBR=1,1\r')
+    utime.sleep(2)
+
+    gsm.write('AT+SAPBR=2,1\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPINIT\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPPARA="CID",1\r')
+    utime.sleep(2)
+
+    # instr = 'AT+HTTPPARA="URL","%s"\r' % url
+    # gsm.write(instr.encode())
+    gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
+    utime.sleep(2)
+
+
+    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
+    utime.sleep(1.5)
+
+    gsm.write(json.dumps(data) + '\r')
+    utime.sleep(3.5)
 
     # 0 = GET, 1 = POST, 2 = HEAD
-    gsm.write('AT+HTTPACTION=1\r\n')
-    utime.sleep(6)
+    gsm.write('AT+HTTPACTION=1\r')
+    utime.sleep(5)
 
-    gsm.write('AT+HTTPREAD\r\n')
+    gsm.write('AT+HTTPREAD\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPTERM\r')
     utime.sleep(1)
 
-    gsm.write('AT+HTTPTERM\r\n')
-    utime.sleep(1)
-
-    gsm.write('AT+SAPBR=0,1\r\n')
+    gsm.write('AT+SAPBR=0,1\r')
     utime.sleep(1)
 
 
@@ -611,14 +627,36 @@ def printHeader():
         oled1.text('..', 1, 9)
 
 
-#   oled1.text(Today,64,0)
-
 def getLocalTimestamp():
     ts = RTC().datetime()
     tsf = ((str(ts[0]) + '-' + str(ts[1]) + '-' +
             str(ts[2]) + 'T' + str(ts[4]) + ':' +
             str(ts[5]) + ':' + str(ts[6])))
     return tsf
+
+
+# def send_data_to_broker(data):
+#     print("Attempting to send data to broker")
+#     max_mqtt_attempts = 5
+#     attempts = 0
+#     published = False
+#     connected = False
+#     while not published and attempts < max_mqtt_attempts:
+#         try:
+#             mqtt_client.connect()
+#             connected = True
+#             mqtt_client.publish('demo_pp', json.dumps(data))
+#             mqtt_client.disconnect()
+#             published = True
+#             print("Data sent to broker")
+#         except Exception as e:
+#             print('Error at send data to broker --> ', e)
+#             print('Attempt %s of %s' % attempts, max_mqtt_attempts)
+#             if connected:
+#                 mqtt_client.disconnect()
+#                 connected = False
+#             attempts += 1
+#             utime.sleep(3)
 
 def simResponse(timer):
     # def simResponse():
@@ -631,9 +669,10 @@ def simResponse(timer):
     # try:
 
     if gsm.any() > 0:
-        #         response = gsm.read().decode().rstrip('\r\n')
         response = str(gsm.readline(), encoding).rstrip('\r\n')
-        print(response)
+        if debugging:
+            print(response)
+
         if '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
@@ -648,7 +687,7 @@ def simResponse(timer):
             response = str(gsm.readline(), encoding).rstrip('\r\n')
             showMsg(response)
             if debugging:
-                print('sim status --> ' + simStatus)
+                print('sim status --> ' + response)
             pos = response.index(':')
             timestamp = response[pos + 3: len(response) - 1]
             if debugging:
@@ -678,6 +717,9 @@ def simResponse(timer):
                 msg = response.split(",")
             if debugging:
                 print('GSM Message: ' + response)
+
+            # if msg[0].strip() == 'mqtt':
+                # send_data_to_broker({'hello':'test'})
 
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
@@ -778,9 +820,6 @@ def simResponse(timer):
 # endregion ------ Timers  -----------------------------------
 
 
-
-
-
 def UserIsBlocked(uuid):
     restraint_list = {}
     jaccess = open("restraint.json", "r")
@@ -789,8 +828,6 @@ def UserIsBlocked(uuid):
         if (uuid.strip() == item['uuid']):
             return True
     return False
-
-
 
 
 def sendSMS(msg):
