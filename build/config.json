@@ -1,6 +1,5 @@
 {
 	"app" : {
-		"version": "1.4",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
@@ -15,25 +14,25 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : true,
-		"pwdRST": "123456"
+		"demo" : true
 
 		},
 	"sim":{
-		"value":"+526642032532",
+		"value":"+526641942241",
 		"apn": "internet.itelcel.com",
 		"APN_USER" : "webgpr",
-		"APN_PWD" : "webgprs2002",
-		"url": "http://ec2-44-203-151-166.compute-1.amazonaws.com/",
+		"APN_PWD" : "",
+		"url__comment": "http,://5b96-2806-1000-8004-3ded-dcee-8ecf-4b8f-c73b.ngrok.io/",
+		"url": "https://byh16n-3-0-0.herokuapp.com/",
 		"api_elerts" : "api/alerts/",
-		"api_codes_events" : "api/codeEvent/new",
+		"api_codes_events" : "api/codeEvent/",
 		"serial_port" : "/dev/ttyAMA0",
 		"serial_baud" : 9600,
 		"serial_timeout" : 0.1,
 		"HTTPACTION_waitTime" : 6,
 		"battery_status_line" : 2,
 		"api_get_line" : 5,
-		"send_code_events" : true,
+		"send_code_events" : false,
 		"incoming_calls": false
 
 	},
@@ -97,7 +96,7 @@
 		"gpio_oled_sda2" : 20,
 		"gpio_oled_scl2" : 21,
 		"gpio_servo_magnet" : 20,
-		"gpio_servo_gate" : 22,
+		"gpio_servo_gate" : 21,
 		"gpio_servo_magnet_angle" : 90,
 		"gpio_servo_gate_angle" : 90,
 		"gpio_servo_magnet_delay" : 5,
@@ -114,3 +113,5 @@
 		"message" : "Door open from sim800L"
 	}
 }
+
+

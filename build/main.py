@@ -1,14 +1,15 @@
-from micropython import const
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset
+import machine
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM
+import os
+import uasyncio
 import _thread
 from ssd1306 import SSD1306_I2C
-# from umqtt.simple import MQTTClient
 import json
 import utime
 import magnet
 import gate
 import initSetup
-
+# import time
 
 # region --------  Setup config json file  ------------------
 
@@ -24,12 +25,12 @@ events_log = json.loads(event.read())
 event.close()
 # endregion ----------------
 
-
 # region ------     Variables     ------------------
 # wait until gsm device connect to network
 
 utime.sleep(14)
 # -------------------------------------
+
 debugging = config['app']['debugging']
 Exceptions = ''
 timestamp = ''
@@ -41,21 +42,19 @@ sendStatus = False
 active_codes = {"codes": []}
 show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
-version_app = config['app']['version']
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
 if debugging:
-    print('Version ' + version_app)
+    print('Version ..')
 initSetup.Initial()
 
 # ------------------ Setup GSM -----------------------
 gsm_tx = config['pi_pins']['gsm_TX']
 gsm_rx = config['pi_pins']['gsm_RX']
-gsm_baud = config['sim']['serial_baud']
 encoding = 'utf-8'
 # gsm = UART(0, 9600, tx=Pin(gsm_tx), rx=Pin(gsm_rx), rxbuf=512)
-gsm = UART(0, gsm_baud, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
+gsm = UART(0, 9600, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
 
 # Setup codes json file
 code_list = {}
@@ -106,132 +105,86 @@ col_pins = [Pin(pin_name, pull=Pin.PULL_DOWN) for pin_name in COLS]
 
 send_code_events = config['sim']['send_code_events']
 admin_sim = config['app']['admin_sim'].split(',')
-apn = config['sim']['apn']
+
 app_version = config['app']['app_version']
+apn = config['sim']['apn']
+url = config['sim']['url'] + config['sim']['api_elerts'] + config['app']['pedestrian_alert_msg'] + '/' + config['sim'][
+    'value']
 serial_port = config['sim']['serial_port']
 serial_baud = config['sim']['serial_baud']
 serial_timeout = config['sim']['serial_timeout']
 HTTPACTION_waitTime = config['sim']['HTTPACTION_waitTime']
 api_get_line = config['sim']['api_get_line']
+
+APN_USER = 'AT+SAPBR=3,1,"USER","%s"\r' % config['sim']['APN_USER']
+APN_PWD = 'AT+SAPBR=3,1,"PWD","%s"\r' % config['sim']['APN_PWD']
 incoming_calls = config['sim']['incoming_calls']
 
-
-# region ----------  show command received ------------------
-def showMsg(msg):
-    oled1.fill(0)
-    oled1.show()
-    oled1.text(msg, 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '.', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '..', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '...', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    ShowMainFrame()
-
-# endregion
-
-# region -------- Configuration  -------------------------------------
-def alterConfig(key1,key2,value):
-    with open('config.json','r+',encoding ='utf8') as cfile:
-        json_data = json.load(cfile)
-        json_data[key1][key2] = value
-        # cfile.seek(0)
-    with open('config.json', 'w') as outFile:
-        try:
-            outFile.seek(0)
-            json.dump(json_data,outFile)
-            # outFile.truncate()
-            print('Done alterConfig----------------')
-        except OSError:
-            print("Oops!", OSError, "occurred.")
-            print("Next entry.")
-            print()
-# endregion
-
 # initial gprs configuration
-# def gsm_config_gprs():
-#     print(" --- CONFIG GPRS --- ");
-#     gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
-#     utime.sleep(1)
-#
-#     # global keepMonitorSIM800L
-#     instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
-#     gsm.write(instr.encode())
-#     utime.sleep(1)
+def gsm_config_gprs():
+    print(" --- CONFIG GPRS --- ");
+    gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
+    utime.sleep(1)
+
+    # global keepMonitorSIM800L
+    instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
+    gsm.write(instr.encode())
+    utime.sleep(1)
+
+
+
 
 # endregion  -------------------------------------
 
-def signal_Status(titulo):
-    global gsm_status
-    gsm_status = []
-    gsm_status.append({'Event':titulo})
-    gsm.write('AT+CSQ\r')
-    utime.sleep(0.7)
-    gsm.write('AT+CBC\r')
-    utime.sleep(0.7)
+
 # endregion  -----------------  Variable  ---------------------------
 
 # region----- Functions --------------------
 
-def ShowMainFrame():
+def initial():
+    gsm.write('AT+CCLK?\r')
+    # cleanup expired codes
+    utime.sleep(5)
+
+    # if tupleToday == emptyTuple:
+    #     print('tupleToday esta VACIO', tupleToday)
+    #     Exceptions = Exceptions + '1,'
+    #     displayErrors()
+    # #     cleanCodes(1,'')
+    # else:
+    #     cleanCodes(1, '')
+
+    cleanCodes(1, '')
+
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
     oled1.text(Today[-2:], 45, 0)
     oled1.text('# enter', 75, 0)
     if len(active_codes) > 0:
         oled1.text("..", 1, 9)
+    #     oled1.text(Today,64,0)
     oled1.text("Codigo: ", 1, 22)
     oled1.show()
 
-
-def initial():
-    global sendStatus
-    gsm.write('AT+CCLK?\r')
-    # cleanup expired codes
-    utime.sleep(5)
-
-    cleanCodes(1, '')
-    ShowMainFrame()
-    # gsm_config_gprs()
-
-    # send module status  ---------------
-    sendStatus = True
-    signal_Status('Reboot')
+    gsm_config_gprs()
 
 
 def init_gsm():
     # gsm.write('ATE0\r')    # Disable the Echo
     # utime.sleep(0.5)
-    apn_usr = config['sim']['APN_USER']
-    apn_pwd = config['sim']['APN_PWD']
-    gsm.write('AT+CSTT="%s","%s","%s"\r' % (apn,apn_usr,apn_pwd))
-    utime.sleep(1)
-    gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r')
-    utime.sleep(1)
-    gsm.write('AT+SAPBR=3,1,"APN","%s"\r' % apn)
-    utime.sleep(1)
-
     gsm.write('AT+CMGF=1\r')  # Select Message format as Text mode
-    utime.sleep(1)
-    gsm.write('AT+CNMI=2,2,0,0,0\r')  # New live SMS Message Indications
-    utime.sleep(1)
+    utime.sleep(0.6)
+    # print(gsm.read().decode())
+    # sim800()
+    gsm.write('AT+CNMI=1,2,0,0,0\r')  # New SMS Message Indications
+    utime.sleep(0.6)
 
     # gsm.write('AT+CGATT?\r\n')
     # utime.sleep(1)
 
     if(not incoming_calls):
         gsm.write('AT+GSMBUSY=1\r')
-        utime.sleep(1)
-
-
-def softReset():
-    reset()
+        utime.sleep(0.6)
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -257,11 +210,8 @@ def InitKeypad():
         for col in range(0, 4):
             row_pins[row].low()
 
-<<<<<<< HEAD
-=======
 
 def unblockUser(uuid):
-    global restraint_list
     jaccess = open("restraint.json", "r")
     restraint_list = json.loads(jaccess.read())
     jaccess.close()
@@ -269,17 +219,12 @@ def unblockUser(uuid):
     for i, item in enumerate(restraint_list['user']):
         if item['uuid'] == uuid:
             del restraint_list['user'][i]
+            print('Dar acceso a este usuario ' + item['name'])
             f = open("restraint.json","w")
             json.dump(restraint_list, f)
             f.close()
             break
 
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
-
-
->>>>>>> avoidRings
 def verifyRestraint(uuid):
     exists = False
     jaccess = open('restraint.json')
@@ -292,25 +237,8 @@ def verifyRestraint(uuid):
             break
     return exists
 
-def unlockUser(uuid):
-    global restraint_list
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
-    for i, item in enumerate(restraint_list['user']):
-        if item['uuid'] == uuid:
-            del restraint_list['user'][i]
-            f = open("restraint.json","w")
-            json.dump(restraint_list, f)
-            f.close()
-            utime.sleep(0.6)
-            jfile = open("restraint.json", "r")
-            restraint_list = json.loads(jfile.read())
-            jfile.close()
-            break
-
 def insertJson(pkg, file):
-    # global jcodes
+    global jcodes
     global code_list
     global restraint_list
     try:  # if os.path.exists(file):
@@ -327,15 +255,6 @@ def insertJson(pkg, file):
         json.dump(file_data, f)
         f.close()
         if file == 'codes.json':
-<<<<<<< HEAD
-            jfile = open('codes.json')
-            code_list = json.loads(jfile.read())
-            jfile.close()
-        elif file == 'restraint.json':
-            jfile = open('restraint.json')
-            restraint_list = json.loads(jfile.read())
-            jfile.close()
-=======
             jcodes = open('codes.json')
             code_list = json.loads(jcodes.read())
             jcodes.close()
@@ -343,7 +262,6 @@ def insertJson(pkg, file):
             jfiles = open('restraint.json')
             restraint_list = json.loads(jfiles.read())
             jfiles.close()
->>>>>>> avoidRings
 
     except FileNotFoundError as exc:  # create file not exists
         print('InsertJson Error --> ', FileNotFoundError)
@@ -416,7 +334,7 @@ def verifyCode(code):
             if send_code_events:
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(code)
-                reg_code_event(str(item['codeId']))
+                reg_code_event_json(str(item['codeId']))
                 print('Call API to store code event')
             else:
                 event_pkg = {"codeId":str(item['codeId']),"picId":"NA",
@@ -443,9 +361,11 @@ def verifyCode(code):
 
 
 def reg_code_event(code_id):
-    data = {"codeId": code_id, "picId": "NA", "CoreSim": config['sim']['value']}
-    url = config['sim']['url'] + config['sim']['api_codes_events']
-    jsonLen = len(str(data).encode('utf-8'))
+    local_url = config['sim']['url'] + config['sim']['api_codes_events'] + code_id + '/NA/' + config['sim']['value']
+    # local_url = config['sim']['url'] + config['sim']['api_codes_events']
+
+    print('local_url --> ' + local_url)
+
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
     # utime.sleep(1)
 
@@ -455,53 +375,101 @@ def reg_code_event(code_id):
     # utime.sleep(1)
 
     # Enable bearer 1.
+    gsm.write('AT+SAPBR=1,1\r\n')
+    utime.sleep(3)
+
+    gsm.write('AT+HTTPTERM\r\n')
+    utime.sleep(1)
+
+    gsm.write('AT+HTTPINIT\r\n')
+    utime.sleep(1)
+
+    gsm.write('AT+HTTPPARA="CID",1\r\n')
+    utime.sleep(1)
+
+    instr = 'AT+HTTPPARA="URL","%s"\r\n' % local_url
+    gsm.write(instr.encode())
+    utime.sleep(2)
+
+    # gsm.write('AT+HTTPPARA="CONTENT","application/json"\r\n')
+    # utime.sleep(1)
 
     gsm.write('AT+HTTPSSL=0\r\n')
-    utime.sleep(1)
-
-    gsm.write('AT+HTTPTERM\r')
-    utime.sleep(1)
-
-    gsm.write('AT+SAPBR=1,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+SAPBR=2,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPINIT\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CID",1\r')
-    utime.sleep(2)
-
-    # instr = 'AT+HTTPPARA="URL","%s"\r' % url
-    # gsm.write(instr.encode())
-    gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
-    utime.sleep(2)
-
-
-    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-    utime.sleep(1.5)
-
-    gsm.write(json.dumps(data) + '\r')
-    utime.sleep(3.5)
+    utime.sleep(0.5)
 
     # 0 = GET, 1 = POST, 2 = HEAD
-    gsm.write('AT+HTTPACTION=1\r')
-    utime.sleep(5)
+    gsm.write('AT+HTTPACTION=1\r\n')
+    utime.sleep(6)
 
-    gsm.write('AT+HTTPREAD\r')
+    gsm.write('AT+HTTPREAD\r\n')
+    utime.sleep(1)
+
+    gsm.write('AT+HTTPTERM\r\n')
+    utime.sleep(1)
+
+    gsm.write('AT+SAPBR=0,1\r\n')
+    utime.sleep(1)
+
+
+def reg_code_event_json(code_id):
+    Url = config['sim']['url'] + config['sim']['api_codes_events']
+    print('Url --> ' + Url)
+
+    pckgJson = {"codeId":code_id,"picId":"NA","CoreSim":config['sim']['value']}
+    pckgJson_obj = json.dumps(pckgJson)
+    pckgJson_size = len(pckgJson_obj)
+
+    print('pckgJson -->', str(pckgJson))
+    print('pckgJson_size --> ', pckgJson_size)
+
+    # Enable bearer 1.
+    gsm.write('AT+SAPBR=1,1\r\n')
+    utime.sleep(3)
+
+    # gsm.write('AT+SAPBR=2,1\r\n')
+    # utime.sleep(2)
+
+    # gsm.write('AT+HTTPTERM\r\n')
+    # utime.sleep(1)
+
+    gsm.write('AT+HTTPINIT\r\n')
     utime.sleep(2)
 
-    gsm.write('AT+HTTPTERM\r')
-    utime.sleep(1)
+    gsm.write('AT+HTTPSSL=1\r\n')
+    utime.sleep(2)
 
-    gsm.write('AT+SAPBR=0,1\r')
-    utime.sleep(1)
+    gsm.write('AT+HTTPPARA="CID",1\r\n')
+    utime.sleep(2)
 
+    instr = 'AT+HTTPPARA="URL","%s"\r\n' % Url
+    gsm.write(instr.encode())
+    utime.sleep(2)
+
+    # instr = 'AT+HTTPPARA="CONTENT","application/json"\r\n'
+    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r\n')
+    # gsm.write(instr.encode())
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPDATA=' + str(pckgJson_size) + ',5000\r\n')
+    # gsm.write('AT+HTTPDATA=192,5000' + '\r\n')
+    utime.sleep(4)
+
+    gsm.write(json.dumps(pckgJson))
+    utime.sleep(10)
+
+    # 0 = GET, 1 = POST, 2 = HEAD
+    gsm.write('AT+HTTPACTION=1\r\n')
+    utime.sleep(3)
+
+    gsm.write('AT+HTTPREAD\r\n')
+    utime.sleep(3)
+    #
+    #
+    gsm.write('AT+HTTPTERM\r\n')
+    utime.sleep(3)
+    #
+    gsm.write('AT+SAPBR=0,1\r\n')
+    utime.sleep(1)
 
 def sendCodeToVisitor(code, visitorSim):
     #  --- send status  -------
@@ -538,8 +506,8 @@ def PollKeypad(timer):
                 key = KEY_UP
             row_pins[row].low()
             if key == KEY_DOWN:
-                if MATRIX[row][col] == '*' and code != '00':
-                    if len(code) > 0:
+                if MATRIX[row][col] == '*':
+                    if (len(code) > 0):
                         code = code[0:-1]
                         code_hide = code_hide[0:-1]
                 elif MATRIX[row][col] == '#':
@@ -547,19 +515,20 @@ def PollKeypad(timer):
                         my_timer = 0
                         cleanCodes(1, '')
                         verifyCode(code)
-                    elif code == '00*': # SOFT RESET
-                        softReset()
-                    elif len(code) > 0 and code == '00*0':
-                        code = code_hide = ''
-                        oled1.text("Codigo: ", 1, 22)
-                    elif len(code) > 0 and code != '00*':
+                    elif len(code) > 0:
                         oled1.fill(0)
+                        #oled1.text("* Borrar      #Enter",1,0)
+                        #oled1.text(Today,64,0)
                         printHeader()
                         oled1.text('Incompleto', 5, 22)
                         oled1.show()
                         song('fail')
+
                         utime.sleep(3)
+                        #oled1.fill(0)
+                        #oled1.text("* Borrar      #Enter",1,0)
                         printHeader()
+                        #oled1.text(Today,64,0)
                         if show_code:
                             oled1.text("Codigo: " + code, 1, 22)
                         else:
@@ -567,6 +536,7 @@ def PollKeypad(timer):
                         oled1.show()
                         warning_message_active = True
                         break
+
                     code = code_hide = ''
                 else:
                     code = code + MATRIX[row][col]
@@ -575,6 +545,8 @@ def PollKeypad(timer):
                 oled1.text("* <-", 1, 0)
                 oled1.text(Today[-2:], 45, 0)
                 oled1.text('# enter', 75, 0)
+                #                     printHeader()
+                #                 oled1.text(Today,64,0)
                 if show_code:
                     oled1.text("Codigo: " + code, 1, 22)
                 else:
@@ -583,8 +555,7 @@ def PollKeypad(timer):
                     oled1.text('..', 1, 9)
                 oled1.show()
                 last_key_press = MATRIX[row][col]
-                if debugging:
-                    print("Codigo:" + code)
+                print("Codigo:" + code)
 
 
 def printHeader():
@@ -596,36 +567,14 @@ def printHeader():
         oled1.text('..', 1, 9)
 
 
+#   oled1.text(Today,64,0)
+
 def getLocalTimestamp():
-    global timestamp
-    tsf = ((str(timestamp[0:2]) + '-' + str(timestamp[3:5]) + '-' +
-          str(timestamp[6:8]) + 'T' + str(timestamp[9:11]) + ':' +
-          str(timestamp[12:14]) + ':' + str(timestamp[15:17])))
+    ts = RTC().datetime()
+    tsf = ((str(ts[0]) + '-' + str(ts[1]) + '-' +
+            str(ts[2]) + 'T' + str(ts[4]) + ':' +
+            str(ts[5]) + ':' + str(ts[6])))
     return tsf
-
-
-# def send_data_to_broker(data):
-#     print("Attempting to send data to broker")
-#     max_mqtt_attempts = 5
-#     attempts = 0
-#     published = False
-#     connected = False
-#     while not published and attempts < max_mqtt_attempts:
-#         try:
-#             mqtt_client.connect()
-#             connected = True
-#             mqtt_client.publish('demo_pp', json.dumps(data))
-#             mqtt_client.disconnect()
-#             published = True
-#             print("Data sent to broker")
-#         except Exception as e:
-#             print('Error at send data to broker --> ', e)
-#             print('Attempt %s of %s' % attempts, max_mqtt_attempts)
-#             if connected:
-#                 mqtt_client.disconnect()
-#                 connected = False
-#             attempts += 1
-#             utime.sleep(3)
 
 def simResponse(timer):
     # def simResponse():
@@ -638,42 +587,51 @@ def simResponse(timer):
     # try:
 
     if gsm.any() > 0:
+        #         response = gsm.read().decode().rstrip('\r\n')
         response = str(gsm.readline(), encoding).rstrip('\r\n')
-        if debugging:
-            print(response)
-        if 'ERROR' in response:
-            print('Error detected')
-        elif '+CREG:' in response:  # Get sim card status
+        print(response)
+        #         if 'OK':
+        #             if debugging:
+        #                 print(response)
+        if '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
             pos = response.index(':')
             simStatus = response[pos + 4: len(response)]
-            showMsg(simStatus)
-            if debugging:
-                print('sim status --> ' + simStatus)
             return simStatus
+            # if simStatus == "0":
+            #     if debugging:
+            #         print('Modulo GSM no tiene sim..!')
+            #     oled1.fill(0)
+            #     oled1.text("No SIM",10,15)
+            #     oled1.show()
+            #     sys.exit(0)
+
         elif '+CCLK' in response:  # Get timestamp from GSM network
             global timestamp
             response = str(gsm.readline(), encoding).rstrip('\r\n')
-            showMsg(response)
-            if debugging:
-                print('sim status --> ' + response)
             pos = response.index(':')
-            timestamp = response[pos + 3: len(response) - 1]
+            timestamp = response[pos + 3: len(response)]
             if debugging:
                 print('GSM timestamp --> ' + timestamp)
-                print(('Params --> ' ,timestamp[0:2],timestamp[3:5],
+                print(('Params --> ', timestamp[0:2],timestamp[3:5],
                        timestamp[6:8],timestamp[9:11],timestamp[12:14],
                        timestamp[15:17]))
 
-                print('rtc_datetime --> ' + str(rtc.datetime()))
+                rtc.datetime((2000 + int(timestamp[0:2]), int(timestamp[3:5]),
+                              int(timestamp[6:8]), 0,int(timestamp[9:11]),
+                              int(timestamp[12:14]),int(timestamp[15:17]),0))
 
-            rtc.datetime((int('20' + timestamp[0:2]), int(timestamp[3:5]),
-                          int(timestamp[6:8]), 0, int(timestamp[9:11]),
-                          int(timestamp[12:14]), int(timestamp[15:17]), 0))
-            timestamplocal = timestamp.split(',')[0].split('/')
-            tupleToday = (int(timestamplocal[0]), int(timestamplocal[1]), int(timestamplocal[2]))
-            Today = timestamplocal[0] + '.' + timestamplocal[1] + '.' + timestamplocal[2]
+                # rtc_timestamp = rtc.datetime()
+                print('rtc_datetime --> ' + str(rtc.datetime()))
+                # print('GMS timestamp formated --> ' + rtc_timestamp)
+                # t1 = datetime.strptime(timestamp_formated, "%y-%m-%dT%H:%M:%S")
+                # print('T1 --> ', str(t1))
+
+                timestamp = timestamp.split(',')[0].split('/')
+                tupleToday = (int(timestamp[0]), int(timestamp[1]), int(timestamp[2]))
+                Today = timestamp[0] + '.' + timestamp[1] + '.' + timestamp[2]
+                print('GSM Net Timestamp: ', tupleToday)
 
         # SMS----------------------
         elif '+CMT:' in response:
@@ -685,12 +643,7 @@ def simResponse(timer):
                 msg = response[index + 2:lenght].split(',')
             else:
                 msg = response.split(",")
-            if debugging:
-                print('GSM Message: ' + response)
-
-            # if msg[0].strip() == 'mqtt':
-                # send_data_to_broker({'hello':'test'})
-
+            print('GSM Message: ', msg)
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
                 msg[3] = msg[3].rstrip('\r\n')
@@ -705,52 +658,37 @@ def simResponse(timer):
                 #codesAvailable()
                 #sendCodeToVisitor(msg[1],msg[4])
 
-            elif msg[0].strip() == 'locked':
-<<<<<<< HEAD
-                if not verifyRestraint(msg[3]):
-                    api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
-=======
+            elif msg[0].strip() == 'blocked':
                 if not verifyRestraint(msg[4]):
                     api_data = { "name": msg[1], "email": msg[2], "uuid": msg[3],
->>>>>>> avoidRings
                                 "house": msg[4].rstrip('\r\n'),
                                 "local": getLocalTimestamp()}
                     insertJson(api_data, 'restraint.json')
-            elif msg[0].strip() == 'unlocked':
+            elif msg[0].strip() == 'unblocked':
                 api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
                             "house": msg[4].rstrip('\r\n'),
                             "date": getLocalTimestamp()}
-<<<<<<< HEAD
-                unlockUser(msg[3])
-=======
                 unblockUser(msg[3])
->>>>>>> avoidRings
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
+                print('abrete Sezamo...', msg)
                 if not UserIsBlocked(msg[2]):
-                    if debugging:
-                        print('Abriendo....', msg)
-                        if 'peatonal' in msg[1]:
-                            magnet.Activate()
-                        elif 'vehicular' in msg[1]:
-                            gate.Activate()
+                    if 'peatonal' in msg[1]:
+                        print('execfile -> magnet.py')
+                        #                         Activate()
+                        magnet.Activate()
+                    elif 'vehicular' in msg[1]:
+                        print('execfile -> gate.py')
+                        gate.Activate()
+                    print('Apertura -->  ' + response + ', msh[1] -> [' + msg[1] + ']')
                 else:
-                    showMsg('User locked')
+                    print('user blocked ...!!!!')
             elif msg[0] == 'status':
                 sendStatus = True
-                signal_Status('Status')
+                signal_Status()
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
-            elif msg[0] == 'rst':
-                alterConfig('app','debugging',False)
-                showMsg('Reset')
-                softReset()
-            elif msg[0] == 'cfgCHG':
-                alterConfig(msg[1], msg[2],msg[3])
-            # elif msg[0] == 'post':
-            #     reg_code_event('62f05aaffcc8845454760252', msg[1])
-
         elif '+CSQ:' in response:
             pos = response.index(':')
             # global response_return
@@ -767,13 +705,14 @@ def simResponse(timer):
 
             if sendStatus:
                 sendStatus = False
-                gsm_status.append({']Local': getLocalTimestamp()})
+                gsm_status.append({'Local': getLocalTimestamp()})
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
-                        + '\n locked: ' + pkgListAccess())
+                        + '\n blocked: ' + pkgListAccess())
+
             elif debugging:
                 print('CBC : ', response_return)
         # return (response_return)
@@ -781,17 +720,18 @@ def simResponse(timer):
             pos = response.index(':')
             response_return = response[pos + 4: (pos + 4) + 1]
             cgreg_status = response_return
+        # if cgreg_status != '1':
+        # sim800Rst()
+        # time.sleep(50)
         elif 'OVER-VOLTAGE' in response:  # 4.27v
             sendStatus = True
-            showMsg('Temp high')
             if debugging:
-                print('GSM Module Temperature high !')
+                print('Aguas que se quema el modulo!!')
             gsm.write('AT+CBC\r')
         elif 'UNDER-VOLTAGE' in response:  # 3.48v
             sendStatus = True
-            showMsg('Temp low')
             if debugging:
-                print('GSM Module Temperature low')
+                print('Aguas que se enfria el modulo!!')
             gsm.write('AT+CBC\r')
     # except NameError:
     #     print('Error -->', NameError)
@@ -799,6 +739,15 @@ def simResponse(timer):
 
 
 # endregion ------ Timers  -----------------------------------
+
+
+def signal_Status():
+    global gsm_status
+    gsm_status = []
+    gsm.write('AT+CSQ\r')
+    utime.sleep(0.7)
+    gsm.write('AT+CBC\r')
+    utime.sleep(0.7)
 
 
 def UserIsBlocked(uuid):
@@ -809,6 +758,8 @@ def UserIsBlocked(uuid):
         if (uuid.strip() == item['uuid']):
             return True
     return False
+
+
 
 
 def sendSMS(msg):

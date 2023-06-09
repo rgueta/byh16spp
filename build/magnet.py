@@ -5,16 +5,17 @@ import json
 conf = open('config.json')
 config = json.loads(conf.read())
 demo = config['app']['demo']
-angle = config['pi_pins']['gpio_servo_gate_angle']
+angle = config['pi_pins']['gpio_servo_magnet_angle']
 
 if demo:
-    close_wait = config['pi_pins']['gpio_servo_gate_delay']
-    pwm = PWM(Pin(config['pi_pins']['gpio_servo_gate']))
+    close_wait = config['pi_pins']['gpio_servo_magnet_delay']
+    pwm = PWM(Pin(config['pi_pins']['gpio_servo_magnet']))
     pwm.freq(50)
 
 
 def Init():
-    servo16(170)
+    print('Init..')
+    servo16(10)
 
 
 def Activate():
@@ -24,34 +25,36 @@ def Activate():
         #         servo(0)
         servoSteps1()
     else:
-        pin = config['pi_pins']['gpio_gate_door']
-        gatePin = Pin(pin, Pin.OUT)
 
-        gatePin.value(0)
-        gatePin.value(1)
-        utime.sleep(config['pi_pins']['gpio_gate_delay'])
-        gatePin.value(0)
+        pin = config['pi_pins']['gpio_magnet']
+        magnetPin = Pin(pin, Pin.OUT)
+
+        magnetPin.value(0)
+        magnetPin.value(1)
+        utime.sleep(config['pi_pins']['gpio_magnet_delay'])
+        magnetPin.value(0)
 
 
-def Open():
-    print('gate.py Opening.. pin [ ' + str(config['pi_pins']['gpio_servo_gate']) +' ]')
-    for degree in range(170, 110, -1):
-        if degree == 110:
+def Close():
+    print('Closing.!')
+    for degree in range(80, 10, -1):
+        if degree == 80:
             utime.sleep(0.06)
         servo16(degree)
         utime.sleep(0.08)
 
 
-def Close():
-    print('Closing.!')
-    for degree in range(110, 170, 1):
-        if degree == 170:
+def Open():
+    print('Opening.!')
+    for degree in range(10, 80, 1):
+        if degree == 80:
             utime.sleep(0.06)
         servo16(degree)
         utime.sleep(0.08)
 
 
 def servo(degrees):
+    print('Servo degrees --> ', degrees)
     newDuty = ((int(degrees) + 45) * 100000) / 9
     pwm.duty_ns(int(newDuty))
 
@@ -67,8 +70,10 @@ def servo16(degrees):
 
 def servoSteps():
     for degree in range(0, angle, 1):
+        if degree == angle:
+            utime.sleep(0.06)
         servo(degree)
-        utime.sleep(0.05)
+        utime.sleep(0.06)
     #         print("increasing -- "+str(degree))
 
     utime.sleep(close_wait)
@@ -77,7 +82,7 @@ def servoSteps():
         if degree == 0:
             utime.sleep(0.06)
         servo(degree)
-        utime.sleep(0.04)
+        utime.sleep(0.06)
 
 
 #         print("decreasing -- "+str(degree))
@@ -90,9 +95,7 @@ def servoSteps1():
 
 if __name__ == "__main__":
     # run locally
-    print('Hello running gate program locally..')
-    #     Activate()
-    #     servoSteps()
+    print('Hello running magnet program locally..')
     Init()
     utime.sleep(5)
 
@@ -101,5 +104,3 @@ if __name__ == "__main__":
         utime.sleep(5)
         Close()
         utime.sleep(5)
-
-

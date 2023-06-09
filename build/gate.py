@@ -17,24 +17,8 @@ def Init():
     servo16(170)
 
 
-def Activate():
-    if demo:
-        #         servo(180)
-        #         utime.sleep(close_wait)
-        #         servo(0)
-        servoSteps1()
-    else:
-        pin = config['pi_pins']['gpio_gate_door']
-        gatePin = Pin(pin, Pin.OUT)
-
-        gatePin.value(0)
-        gatePin.value(1)
-        utime.sleep(config['pi_pins']['gpio_gate_delay'])
-        gatePin.value(0)
-
-
 def Open():
-    print('gate.py Opening.. pin [ ' + str(config['pi_pins']['gpio_servo_gate']) +' ]')
+    print('gate.py Opening..!')
     for degree in range(170, 110, -1):
         if degree == 110:
             utime.sleep(0.06)
@@ -49,6 +33,22 @@ def Close():
             utime.sleep(0.06)
         servo16(degree)
         utime.sleep(0.08)
+
+
+def Activate():
+    if demo:
+        #         servo(180)
+        #         utime.sleep(close_wait)
+        #         servo(0)
+        servoSteps1()
+    else:
+        pin = config['pi_pins']['gpio_gate_door']
+        gatePin = Pin(pin, Pin.OUT)
+
+        gatePin.value(0)
+        gatePin.value(1)
+        utime.sleep(config['pi_pins']['gpio_gate_delay'])
+        gatePin.value(0)
 
 
 def servo(degrees):
