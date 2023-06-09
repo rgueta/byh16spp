@@ -218,21 +218,20 @@ def init_gsm():
     utime.sleep(1)
 
     gsm.write('AT+CMGF=1\r')  # Select Message format as Text mode
-    utime.sleep(0.6)
-    gsm.write('AT+CNMI=1,2,0,0,0\r')  # New SMS Message Indications
-    utime.sleep(0.6)
+    utime.sleep(1)
+    gsm.write('AT+CNMI=2,2,0,0,0\r')  # New live SMS Message Indications
+    utime.sleep(1)
 
     # gsm.write('AT+CGATT?\r\n')
     # utime.sleep(1)
 
     if(not incoming_calls):
         gsm.write('AT+GSMBUSY=1\r')
-        utime.sleep(0.6)
+        utime.sleep(1)
 
 
 def softReset():
     reset()
-
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -387,7 +386,7 @@ def verifyCode(code):
             if send_code_events:
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(code)
-                reg_code_event_json(str(item['codeId']))
+                reg_code_event(str(item['codeId']))
                 print('Call API to store code event')
             else:
                 event_pkg = {"codeId":str(item['codeId']),"picId":"NA",
@@ -414,7 +413,7 @@ def verifyCode(code):
 
 
 def reg_code_event(code_id):
-    data = {"codeId":code_id, "picId":"NA", "CoreSim":config['sim']['value']}
+    data = {"codeId": code_id, "picId": "NA", "CoreSim": config['sim']['value']}
     url = config['sim']['url'] + config['sim']['api_codes_events']
     jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
@@ -473,66 +472,6 @@ def reg_code_event(code_id):
     gsm.write('AT+SAPBR=0,1\r')
     utime.sleep(1)
 
-
-def reg_code_event_json(code_id):
-    Url = config['sim']['url'] + config['sim']['api_codes_events']
-    print('Url --> ' + Url)
-
-    pckgJson = {"codeId":code_id,"picId":"NA","CoreSim":config['sim']['value']}
-    pckgJson_obj = json.dumps(pckgJson)
-    pckgJson_size = len(pckgJson_obj)
-
-    print('pckgJson -->', str(pckgJson))
-    print('pckgJson_size --> ', pckgJson_size)
-
-    # Enable bearer 1.
-    gsm.write('AT+SAPBR=1,1\r\n')
-    utime.sleep(3)
-
-    # gsm.write('AT+SAPBR=2,1\r\n')
-    # utime.sleep(2)
-
-    # gsm.write('AT+HTTPTERM\r\n')
-    # utime.sleep(1)
-
-    gsm.write('AT+HTTPINIT\r\n')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPSSL=1\r\n')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CID",1\r\n')
-    utime.sleep(2)
-
-    instr = 'AT+HTTPPARA="URL","%s"\r\n' % Url
-    gsm.write(instr.encode())
-    utime.sleep(2)
-
-    # instr = 'AT+HTTPPARA="CONTENT","application/json"\r\n'
-    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r\n')
-    # gsm.write(instr.encode())
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPDATA=' + str(pckgJson_size) + ',5000\r\n')
-    # gsm.write('AT+HTTPDATA=192,5000' + '\r\n')
-    utime.sleep(4)
-
-    gsm.write(json.dumps(pckgJson))
-    utime.sleep(10)
-
-    # 0 = GET, 1 = POST, 2 = HEAD
-    gsm.write('AT+HTTPACTION=1\r\n')
-    utime.sleep(3)
-
-    gsm.write('AT+HTTPREAD\r\n')
-    utime.sleep(3)
-    #
-    #
-    gsm.write('AT+HTTPTERM\r\n')
-    utime.sleep(3)
-    #
-    gsm.write('AT+SAPBR=0,1\r\n')
-    utime.sleep(1)
 
 def sendCodeToVisitor(code, visitorSim):
     #  --- send status  -------
@@ -628,10 +567,10 @@ def printHeader():
 
 
 def getLocalTimestamp():
-    ts = RTC().datetime()
-    tsf = ((str(ts[0]) + '-' + str(ts[1]) + '-' +
-            str(ts[2]) + 'T' + str(ts[4]) + ':' +
-            str(ts[5]) + ':' + str(ts[6])))
+    global timestamp
+    tsf = ((str(timestamp[0:2]) + '-' + str(timestamp[3:5]) + '-' +
+          str(timestamp[6:8]) + 'T' + str(timestamp[9:11]) + ':' +
+          str(timestamp[12:14]) + ':' + str(timestamp[15:17])))
     return tsf
 
 
@@ -672,8 +611,9 @@ def simResponse(timer):
         response = str(gsm.readline(), encoding).rstrip('\r\n')
         if debugging:
             print(response)
-
-        if '+CREG:' in response:  # Get sim card status
+        if 'ERROR' in response:
+            print('Error detected')
+        elif '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
             pos = response.index(':')
@@ -701,9 +641,9 @@ def simResponse(timer):
             rtc.datetime((int('20' + timestamp[0:2]), int(timestamp[3:5]),
                           int(timestamp[6:8]), 0, int(timestamp[9:11]),
                           int(timestamp[12:14]), int(timestamp[15:17]), 0))
-            timestamp = timestamp.split(',')[0].split('/')
-            tupleToday = (int(timestamp[0]), int(timestamp[1]), int(timestamp[2]))
-            Today = timestamp[0] + '.' + timestamp[1] + '.' + timestamp[2]
+            timestamplocal = timestamp.split(',')[0].split('/')
+            tupleToday = (int(timestamplocal[0]), int(timestamplocal[1]), int(timestamplocal[2]))
+            Today = timestamplocal[0] + '.' + timestamplocal[1] + '.' + timestamplocal[2]
 
         # SMS----------------------
         elif '+CMT:' in response:
@@ -749,13 +689,13 @@ def simResponse(timer):
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
-                if debugging:
-                    print('Abriendo...', msg)
                 if not UserIsBlocked(msg[2]):
-                    if 'peatonal' in msg[1]:
-                        magnet.Activate()
-                    elif 'vehicular' in msg[1]:
-                        gate.Activate()
+                    if debugging:
+                        print('Abriendo....', msg)
+                        if 'peatonal' in msg[1]:
+                            magnet.Activate()
+                        elif 'vehicular' in msg[1]:
+                            gate.Activate()
                 else:
                     showMsg('User locked')
             elif msg[0] == 'status':
@@ -769,6 +709,8 @@ def simResponse(timer):
                 softReset()
             elif msg[0] == 'cfgCHG':
                 alterConfig(msg[1], msg[2],msg[3])
+            # elif msg[0] == 'post':
+            #     reg_code_event('62f05aaffcc8845454760252', msg[1])
 
         elif '+CSQ:' in response:
             pos = response.index(':')
