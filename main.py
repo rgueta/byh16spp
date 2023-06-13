@@ -475,6 +475,7 @@ def reg_code_event(code_id):
     utime.sleep(1)
 
 def alert_event(msg):
+    print ('semi url --> ' + coreId + msg)
     data = {"msg":"message"}
     url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + msg
 
@@ -758,10 +759,10 @@ def simResponse(timer):
                         print('Abriendo....', msg)
                         if 'peatonal' in msg[1]:
                             magnet.Activate()
-                            alert_event('Apertura_Peatonal')
+                            alert_event("Apertura_Peatonal")
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
-                            alert_event('Apertura_Vehicular')
+                            alert_event("Apertura_Vehicular")
                 else:
                     showMsg('User locked')
             elif msg[0] == 'status':
