@@ -475,9 +475,11 @@ def reg_code_event(code_id):
     utime.sleep(1)
 
 def alert_event(msg):
-    global coreId
+    print('coreId --> ' + coreId)
     data = {"msg":"message"}
     url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + '/' + msg
+
+    print('url --> ' + url)
     jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
     # utime.sleep(1)
