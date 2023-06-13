@@ -476,7 +476,7 @@ def reg_code_event(code_id):
 
 def alert_event(msg):
     data = {"msg":"message"}
-    url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + "//" + msg
+    url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + msg
 
     print('url --> ' + url)
     jsonLen = len(str(data).encode('utf-8'))
@@ -758,10 +758,10 @@ def simResponse(timer):
                         print('Abriendo....', msg)
                         if 'peatonal' in msg[1]:
                             magnet.Activate()
-                            alert_event('Apertura_Peatonal')
+                            alert_event('/Apertura_Peatonal')
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
-                            alert_event('Apertura_Vehicular')
+                            alert_event('/Apertura_Vehicular')
                 else:
                     showMsg('User locked')
             elif msg[0] == 'status':
