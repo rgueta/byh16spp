@@ -9,7 +9,7 @@ import magnet
 import gate
 import initSetup
 
-#####2 git branch alert_open_event  -----------------
+#####6 git branch alert_open_event  -----------------
 
 # region --------  Setup config json file  ------------------
 
@@ -475,9 +475,8 @@ def reg_code_event(code_id):
     utime.sleep(1)
 
 def alert_event(msg):
-    coreId = coreId + '/'
     data = {"msg":"message"}
-    url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + msg
+    url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + "//" + msg
 
     print('url --> ' + url)
     jsonLen = len(str(data).encode('utf-8'))
