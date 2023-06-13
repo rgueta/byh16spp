@@ -9,7 +9,7 @@ import magnet
 import gate
 import initSetup
 
-#####1 git branch alert_open_event  -----------------
+#####2 git branch alert_open_event  -----------------
 
 # region --------  Setup config json file  ------------------
 
@@ -477,7 +477,6 @@ def reg_code_event(code_id):
 def alert_event(msg):
     global coreId
     data = {"msg":"message"}
-    print('coreId--> ' + coreId)
     url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + '/' + msg
     jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
@@ -758,10 +757,10 @@ def simResponse(timer):
                         print('Abriendo....', msg)
                         if 'peatonal' in msg[1]:
                             magnet.Activate()
-                            alert_event('Apertura Peatonal')
+                            alert_event('Apertura_Peatonal')
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
-                            alert_event('Apertura Vehicular')
+                            alert_event('Apertura_Vehicular')
                 else:
                     showMsg('User locked')
             elif msg[0] == 'status':
