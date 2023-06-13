@@ -2,7 +2,7 @@
 	"app" : {
 		"_comment":" gin branch --> alert_open_event",
 		"version": "1.5",
-		"coreId" : "60afd3955d8280dc19460c3a",
+		"coreId" : "60afd3955d8280dc19460c3a/",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
