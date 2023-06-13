@@ -2,7 +2,7 @@
 	"app" : {
 		"_comment":" gin branch --> alert_open_event",
 		"version": "1.5",
-		"coreId" : "60afd3955d8280dc19460c3a/",
+		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
@@ -27,7 +27,7 @@
 		"APN_USER" : "webgpr",
 		"APN_PWD" : "webgprs2002",
 		"url": "http://100.24.58.74/",
-		"api_elerts" : "api/alerts/",
+		"api_alerts" : "api/alerts/",
 		"api_codes_events" : "api/codeEvent/new",
 		"serial_port" : "/dev/ttyAMA0",
 		"serial_baud" : 9600,
