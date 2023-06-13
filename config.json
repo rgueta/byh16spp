@@ -1,6 +1,8 @@
 {
 	"app" : {
-		"version": "1.4",
+		"_comment":" gin branch --> alert_open_event",
+		"version": "1.5",
+		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
@@ -24,7 +26,7 @@
 		"apn": "internet.itelcel.com",
 		"APN_USER" : "webgpr",
 		"APN_PWD" : "webgprs2002",
-		"url": "http://ec2-44-203-151-166.compute-1.amazonaws.com/",
+		"url": "http://100.24.58.74/",
 		"api_elerts" : "api/alerts/",
 		"api_codes_events" : "api/codeEvent/new",
 		"serial_port" : "/dev/ttyAMA0",
@@ -105,12 +107,5 @@
 		"keypad_rows" : [15,14,13,12],
 		"keypad_cols" : [11,10,9,8],
 		"buzzer" : 28
-	},
-	"email" : {
-	},
-	"data" : {
-		"privada" : "60afd3955d8280dc19460c3a",
-		"item" : "pedestrian",
-		"message" : "Door open from sim800L"
 	}
 }

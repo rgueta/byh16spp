@@ -9,6 +9,7 @@ import magnet
 import gate
 import initSetup
 
+##### git branch alert_open_event  -----------------
 
 # region --------  Setup config json file  ------------------
 
@@ -39,6 +40,7 @@ Today = ''
 gsm_status = []
 sendStatus = False
 active_codes = {"codes": []}
+coreId = config['app']['coreId']
 show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
 version_app = config['app']['version']
@@ -472,6 +474,66 @@ def reg_code_event(code_id):
     gsm.write('AT+SAPBR=0,1\r')
     utime.sleep(1)
 
+def alert_event(msg):
+    data =''
+    url = config['sim']['url'] + config['sim']['api_alerts'] + '/' + coreId + '/' + msg
+    jsonLen = len(str(data).encode('utf-8'))
+    # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
+    # utime.sleep(1)
+
+    # global keepMonitorSIM800L
+    # instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
+    # gsm.write(instr.encode())
+    # utime.sleep(1)
+
+    # Enable bearer 1.
+
+    gsm.write('AT+HTTPSSL=0\r\n')
+    utime.sleep(1)
+
+    gsm.write('AT+HTTPTERM\r')
+    utime.sleep(1)
+
+    gsm.write('AT+SAPBR=1,1\r')
+    utime.sleep(2)
+
+    gsm.write('AT+SAPBR=2,1\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPINIT\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPPARA="CID",1\r')
+    utime.sleep(2)
+
+    # instr = 'AT+HTTPPARA="URL","%s"\r' % url
+    # gsm.write(instr.encode())
+    gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
+    utime.sleep(2)
+
+
+    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
+    utime.sleep(1.5)
+
+    gsm.write(json.dumps(data) + '\r')
+    utime.sleep(3.5)
+
+    # 0 = GET, 1 = POST, 2 = HEAD
+    gsm.write('AT+HTTPACTION=1\r')
+    utime.sleep(5)
+
+    gsm.write('AT+HTTPREAD\r')
+    utime.sleep(2)
+
+    gsm.write('AT+HTTPTERM\r')
+    utime.sleep(1)
+
+    gsm.write('AT+SAPBR=0,1\r')
+    utime.sleep(1)
+
 
 def sendCodeToVisitor(code, visitorSim):
     #  --- send status  -------
@@ -694,8 +756,10 @@ def simResponse(timer):
                         print('Abriendo....', msg)
                         if 'peatonal' in msg[1]:
                             magnet.Activate()
+                            alert_event('Apertura Peatonal')
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
+                            alert_event('Apertura Vehicular')
                 else:
                     showMsg('User locked')
             elif msg[0] == 'status':
