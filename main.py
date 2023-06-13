@@ -9,7 +9,7 @@ import magnet
 import gate
 import initSetup
 
-##### git branch alert_open_event  -----------------
+#####1 git branch alert_open_event  -----------------
 
 # region --------  Setup config json file  ------------------
 
