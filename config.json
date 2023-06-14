@@ -30,7 +30,7 @@
 		"api_alerts" : "api/alerts/",
 		"api_codes_events" : "api/codeEvent/new",
 		"serial_port" : "/dev/ttyAMA0",
-		"serial_baud" : 9600,
+		"serial_baud" : 115200,
 		"serial_timeout" : 0.1,
 		"HTTPACTION_waitTime" : 6,
 		"battery_status_line" : 2,
