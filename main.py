@@ -549,11 +549,11 @@ def alert_event(msg):
     gsm.write(instr.encode())
     utime.sleep(2)
 
-    # gsm.write('AT+HTTPSSL=0\r\n')
-    # utime.sleep(1)
+    gsm.write('AT+HTTPSSL=0\r\n')
+    utime.sleep(1.5)
 
-    # gsm.write('AT+HTTPTERM\r')
-    # utime.sleep(1)
+    gsm.write('AT+HTTPTERM\r')
+    utime.sleep(1.5)
 
     gsm.write('AT+SAPBR=1,1\r')
     utime.sleep(2)
