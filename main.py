@@ -549,8 +549,6 @@ def alert_event(msg):
     gsm.write(instr.encode())
     utime.sleep(2)
 
-    # Enable bearer 1.
-
     # gsm.write('AT+HTTPSSL=0\r\n')
     # utime.sleep(1)
 
@@ -564,7 +562,7 @@ def alert_event(msg):
     utime.sleep(2)
 
     gsm.write('AT+HTTPINIT\r')
-    utime.sleep(4)
+    utime.sleep(3)
 
     gsm.write('AT+HTTPPARA="CID",1\r')
     utime.sleep(2)
@@ -579,7 +577,7 @@ def alert_event(msg):
 
 
     gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-    utime.sleep(1.5)
+    utime.sleep(2)
 
     gsm.write(json.dumps(data) + '\r')
     utime.sleep(3.5)
