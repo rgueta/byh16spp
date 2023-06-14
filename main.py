@@ -489,7 +489,8 @@ def alert_event(msg):
     # Enable bearer 1.
 
     gsm.write('AT+HTTPSSL=0\r\n')
-    utime.sleep(1)
+    gsm.read(128)
+    # utime.sleep(1)
 
     gsm.write('AT+HTTPTERM\r')
     utime.sleep(1)
