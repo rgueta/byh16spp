@@ -529,10 +529,10 @@ def alert_event(msg):
     utime.sleep(2)
 
     gsm.write('AT+HTTPTERM\r')
-    utime.sleep(1)
+    utime.sleep(2)
 
-    # gsm.write('AT+SAPBR=0,1\r')
-    # utime.sleep(1)
+    gsm.write('AT+SAPBR=0,1\r')
+    utime.sleep(1)
 
 
 def sendCodeToVisitor(code, visitorSim):
