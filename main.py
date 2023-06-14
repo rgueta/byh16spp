@@ -477,8 +477,6 @@ def reg_code_event(code_id):
 def alert_event(msg):
     data = {"msg":"message"}
     url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + '/' + msg
-
-    print('url --> ' + url)
     jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
     # utime.sleep(1)
@@ -533,8 +531,8 @@ def alert_event(msg):
     gsm.write('AT+HTTPTERM\r')
     utime.sleep(1)
 
-    gsm.write('AT+SAPBR=0,1\r')
-    utime.sleep(1)
+    # gsm.write('AT+SAPBR=0,1\r')
+    # utime.sleep(1)
 
 
 def sendCodeToVisitor(code, visitorSim):
