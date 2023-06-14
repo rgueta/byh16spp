@@ -475,6 +475,7 @@ def reg_code_event(code_id):
     utime.sleep(1)
 
 def alert_event(msg):
+    # line below its just to put some data into data variable but not used for message by itself
     data = {"msg":"message"}
     url = config['sim']['url'] + config['sim']['api_alerts'] + coreId + '/' + msg
     jsonLen = len(str(data).encode('utf-8'))
@@ -489,63 +490,51 @@ def alert_event(msg):
     # Enable bearer 1.
 
     gsm.write('AT+HTTPSSL=0\r\n')
-    print(gsm.read(128))
-    # utime.sleep(1)
+    utime.sleep(1)
 
     gsm.write('AT+HTTPTERM\r')
-    # utime.sleep(1)
-    print(gsm.read(128))
+    utime.sleep(1)
 
     gsm.write('AT+SAPBR=1,1\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
-    
+    utime.sleep(2)
+
     gsm.write('AT+SAPBR=2,1\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     gsm.write('AT+HTTPINIT\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     gsm.write('AT+HTTPPARA="CID",1\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     # instr = 'AT+HTTPPARA="URL","%s"\r' % url
     # gsm.write(instr.encode())
     gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
-    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-    # utime.sleep(1.5)
-    print(gsm.read(128))
+
+    gsm.write('AT+HTTPDATA=%s,10000\r' % str(jsonLen))
+    utime.sleep(1.5)
 
     gsm.write(json.dumps(data) + '\r')
-    # utime.sleep(3.5)
-    print(gsm.read(128))
+    utime.sleep(3.5)
 
     # 0 = GET, 1 = POST, 2 = HEAD
     gsm.write('AT+HTTPACTION=1\r')
-    # utime.sleep(5)
-    print(gsm.read(128))
+    utime.sleep(5)
 
     gsm.write('AT+HTTPREAD\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     gsm.write('AT+HTTPTERM\r')
-    # utime.sleep(2)
-    print(gsm.read(128))
+    utime.sleep(2)
 
     gsm.write('AT+SAPBR=0,1\r')
-    # utime.sleep(1)
-    print(gsm.read(128))
+    utime.sleep(1)
+
 
 def sendCodeToVisitor(code, visitorSim):
     #  --- send status  -------
