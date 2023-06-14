@@ -562,7 +562,7 @@ def alert_event(msg):
     utime.sleep(2)
 
     gsm.write('AT+HTTPINIT\r')
-    utime.sleep(3)
+    utime.sleep(2)
 
     gsm.write('AT+HTTPPARA="CID",1\r')
     utime.sleep(2)
