@@ -40,10 +40,6 @@
 
 	},
 	"backup_lines" : {
-		"url": "https://weak-geese-post-187-250-167-48.loca.lt/",
-		"url": "https://byh16n-3-0-0.herokuapp.com/",
-		"url": "http://localhost:5000/api/codes/60c5635c3371034c5ac66385",
-		"url1": "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=c043c57758babeaa2bf5d6de5179ee27",
 		"value":"+526645205849",
 		"value1":"+18507867611"
 	},
