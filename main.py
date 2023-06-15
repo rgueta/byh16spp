@@ -478,7 +478,14 @@ def alert_event(msg,title,subtitle):
     # line below its just to put some data into data variable but not used for message by itself
     data = {"msg":"message"}
     subUrl = config['sim']['url'] + config['sim']['api_alerts'] + coreId
-    url = subUrl + '/' + msg + '/' + title + '/' + subtitle
+    
+    url = subUrl + '/' + msg
+    if(title != ''):
+        url += '/' + title
+    
+    if(subtitle != ''):
+        url += '/' + subtitle
+    
     jsonLen = len(str(data).encode('utf-8'))
     # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
     # utime.sleep(1)
