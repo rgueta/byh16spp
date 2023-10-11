@@ -1,5 +1,8 @@
 {
 	"app" : {
+		"_comment":" gin branch --> alert_open_event",
+		"version": "1.5",
+		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
 		"logo_timer" : 10,
@@ -14,33 +17,29 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : true
+		"demo" : true,
+		"pwdRST": "123456"
 
 		},
 	"sim":{
-		"value":"+526641942241",
+		"value":"+526642032532",
 		"apn": "internet.itelcel.com",
 		"APN_USER" : "webgpr",
-		"APN_PWD" : "",
-		"url__comment": "http,://5b96-2806-1000-8004-3ded-dcee-8ecf-4b8f-c73b.ngrok.io/",
-		"url": "https://byh16n-3-0-0.herokuapp.com/",
-		"api_elerts" : "api/alerts/",
-		"api_codes_events" : "api/codeEvent/",
+		"APN_PWD" : "webgprs2002",
+		"url": "http://100.24.58.74/",
+		"api_alerts" : "api/alerts/",
+		"api_codes_events" : "api/codeEvent/new",
 		"serial_port" : "/dev/ttyAMA0",
-		"serial_baud" : 9600,
+		"serial_baud" : 115200,
 		"serial_timeout" : 0.1,
 		"HTTPACTION_waitTime" : 6,
 		"battery_status_line" : 2,
 		"api_get_line" : 5,
-		"send_code_events" : false,
+		"send_code_events" : true,
 		"incoming_calls": false
 
 	},
 	"backup_lines" : {
-		"url": "https://weak-geese-post-187-250-167-48.loca.lt/",
-		"url": "https://byh16n-3-0-0.herokuapp.com/",
-		"url": "http://localhost:5000/api/codes/60c5635c3371034c5ac66385",
-		"url1": "http://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=c043c57758babeaa2bf5d6de5179ee27",
 		"value":"+526645205849",
 		"value1":"+18507867611"
 	},
@@ -96,7 +95,7 @@
 		"gpio_oled_sda2" : 20,
 		"gpio_oled_scl2" : 21,
 		"gpio_servo_magnet" : 20,
-		"gpio_servo_gate" : 21,
+		"gpio_servo_gate" : 22,
 		"gpio_servo_magnet_angle" : 90,
 		"gpio_servo_gate_angle" : 90,
 		"gpio_servo_magnet_delay" : 5,
@@ -104,14 +103,5 @@
 		"keypad_rows" : [15,14,13,12],
 		"keypad_cols" : [11,10,9,8],
 		"buzzer" : 28
-	},
-	"email" : {
-	},
-	"data" : {
-		"privada" : "60afd3955d8280dc19460c3a",
-		"item" : "pedestrian",
-		"message" : "Door open from sim800L"
 	}
 }
-
-

@@ -18,8 +18,8 @@
 		"debugging": true,
 		"show_code": true,
 		"demo" : true,
-		"pwdRST": "123456"
-
+		"pwdRST": "123456",
+		"openByCode" : "gate"
 		},
 	"sim":{
 		"value":"+526642032532",

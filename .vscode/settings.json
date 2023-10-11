@@ -1,27 +1,13 @@
 {
+    "python.linting.enabled": true,
     "python.languageServer": "Pylance",
-<<<<<<< HEAD
-    "python.linting.pylintEnabled": false,
-=======
->>>>>>> avoidRings
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportMissingModuleSource": "none"
-    },
+    "python.analysis.typeCheckingMode": "basic",
+    "micropico.syncFolder": "",
+    "micropico.openOnStart": true,
+    "python.analysis.typeshedPaths": [
+        ".vscode/Pico-W-Stub"
+    ],
     "python.analysis.extraPaths": [
-<<<<<<< HEAD
-        "",
-        "c:\\Users\\ricar\\.vscode\\extensions\\joedevivo.vscode-circuitpython-0.1.20-win32-x64\\stubs",
-        "c:\\Users\\ricar\\AppData\\Roaming\\Code\\User\\globalStorage\\joedevivo.vscode-circuitpython\\bundle\\20230609\\adafruit-circuitpython-bundle-py-20230609\\lib"
-    ],
-    "circuitpython.board.version": null
-=======
-        "c:\\Users\\ricar\\.vscode\\extensions\\joedevivo.vscode-circuitpython-0.1.20-win32-x64\\boards\\0x239A\\0x80F4",
-        "c:\\Users\\ricar\\.vscode\\extensions\\joedevivo.vscode-circuitpython-0.1.20-win32-x64\\stubs",
-        "c:\\Users\\ricar\\AppData\\Roaming\\Code\\User\\globalStorage\\joedevivo.vscode-circuitpython\\bundle\\20230409\\adafruit-circuitpython-bundle-py-20230409\\lib"
-    ],
-    "circuitpython.board.version": null,
-    "python.linting.pylintEnabled": false,
-    "circuitpython.board.vid": "0x239A",
-    "circuitpython.board.pid": "0x80F4"
->>>>>>> avoidRings
+        ".vscode/Pico-W-Stub/stubs"
+    ]
 }

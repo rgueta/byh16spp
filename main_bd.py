@@ -44,7 +44,6 @@ coreId = config['app']['coreId']
 show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
 version_app = config['app']['version']
-openByCode = config['app']['openByCode']
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
@@ -382,10 +381,7 @@ def verifyCode(code):
         if code == item['code']:
             print('codigo valido..! userId : ' + str(item['userId']))
             song('ok')
-            if openByCode == 'magnet':
-                magnet.Activate()
-            elif openByCode == 'gate':
-                gate.Activate()
+            magnet.Activate()
             if send_code_events:
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(code)
