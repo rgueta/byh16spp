@@ -19,7 +19,7 @@
 		"show_code": true,
 		"demo" : true,
 		"pwdRST": "123456",
-		"openByCode" : "gate"
+		"openByCode" : "gate", ">>> Comment, alertate value":"magnet"
 		},
 	"sim":{
 		"value":"+526642032532",
