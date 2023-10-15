@@ -8,6 +8,7 @@ import utime
 import magnet
 import gate
 import initSetup
+import jsonTools
 
 #####1 git branch alert_open_event  -----------------
 
@@ -119,25 +120,7 @@ api_get_line = config['sim']['api_get_line']
 incoming_calls = config['sim']['incoming_calls']
 
 
-# region ----------  show command received ------------------
-def showMsg(msg):
-    oled1.fill(0)
-    oled1.show()
-    oled1.text(msg, 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '.', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '..', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    oled1.text(msg + '...', 1, 0)
-    oled1.show()
-    utime.sleep(0.9)
-    ShowMainFrame()
 
-# endregion
 
 # region -------- Configuration  -------------------------------------
 def alterConfig(key1,key2,value):
@@ -179,6 +162,42 @@ def signal_Status(titulo):
 
 # region----- Functions --------------------
 
+# region ----------  show command received ------------------
+def showMsg(msg):
+    oled1.fill(0)
+    oled1.show()
+    oled1.text(msg, 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '.', 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '..', 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '...', 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    ShowMainFrame()
+
+# endregion
+
+def showVersion(msg):
+    oled1.fill(0)
+    oled1.show()
+    oled1.text(msg, 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '.', 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '..', 1, 0)
+    oled1.show()
+    utime.sleep(0.9)
+    oled1.text(msg + '...', 1, 0)
+    oled1.show()
+    utime.sleep(3)
+
 def ShowMainFrame():
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
@@ -191,6 +210,8 @@ def ShowMainFrame():
 
 
 def initial():
+    showVersion('v-' + version_app)
+    utime.sleep(3)
     global sendStatus
     gsm.write('AT+CCLK?\r')
     # cleanup expired codes
@@ -258,66 +279,67 @@ def InitKeypad():
             row_pins[row].low()
 
 
-def unblockUser(uuid):
-    global restraint_list
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
+# def unblockUser(uuid):
+    # global restraint_list
+    # jaccess = open("restraint.json", "r")
+    # restraint_list = json.loads(jaccess.read())
+    # jaccess.close()
 
-    for i, item in enumerate(restraint_list['user']):
-        if item['uuid'] == uuid:
-            del restraint_list['user'][i]
-            f = open("restraint.json","w")
-            json.dump(restraint_list, f)
-            f.close()
-            break
+    # for i, item in enumerate(restraint_list['user']):
+    #     if item['uuid'] == uuid:
+    #         del restraint_list['user'][i]
+    #         f = open("restraint.json","w")
+    #         json.dump(restraint_list, f)
+    #         f.close()
+    #         break
 
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
+    # jsonTools.updJson('d','restraint.json','uuid',uuid,'')
+    # jaccess = open("restraint.json", "r")
+    # restraint_list = json.loads(jaccess.read())
+    # jaccess.close()
 
 
-def verifyRestraint(uuid):
-    exists = False
-    jaccess = open('restraint.json')
-    restraint_list = json.loads(jaccess.read())
-    jaccess.close()
-    for i, item in enumerate(restraint_list['user']):
-        if item['uuid'] == uuid:
-            print('Ya existe este usuario')
-            exists = True
-            break
-    return exists
+# def verifyRestraint(uuid):
+#     exists = False
+#     jaccess = open('restraint.json')
+#     restraint_list = json.loads(jaccess.read())
+#     jaccess.close()
+#     for i, item in enumerate(restraint_list['user']):
+#         if item['uuid'] == uuid:
+#             print('Ya existe este usuario')
+#             exists = True
+#             break
+#     return exists
 
-def insertJson(pkg, file):
-    global jcodes
-    global code_list
-    global restraint_list
-    try:  # if os.path.exists(file):
-        with open(file, 'r+', encoding='utf8') as jsonFile:
-            #     # First we load existing data into a dict.
-            file_data = json.load(jsonFile)
-            if file == 'codes.json':
-                file_data['codes'].append(pkg)
-            elif file == 'restraint.json':
-                file_data['user'].append(pkg)
-            elif file == 'events.json':
-                file_data['events'].append(pkg)
-        f = open(file, "w")
-        json.dump(file_data, f)
-        f.close()
-        if file == 'codes.json':
-            jcodes = open('codes.json')
-            code_list = json.loads(jcodes.read())
-            jcodes.close()
-        elif file == 'restraint.json':
-            jfiles = open('restraint.json')
-            restraint_list = json.loads(jfiles.read())
-            jfiles.close()
+# def insertJson(pkg, file):
+#     global jcodes
+#     global code_list
+#     global restraint_list
+#     try:  # if os.path.exists(file):
+#         with open(file, 'r+', encoding='utf8') as jsonFile:
+#             #     # First we load existing data into a dict.
+#             file_data = json.load(jsonFile)
+#             if file == 'codes.json':
+#                 file_data['codes'].append(pkg)
+#             elif file == 'restraint.json':
+#                 file_data['user'].append(pkg)
+#             elif file == 'events.json':
+#                 file_data['events'].append(pkg)
+#         f = open(file, "w")
+#         json.dump(file_data, f)
+#         f.close()
+#         if file == 'codes.json':
+#             jcodes = open('codes.json')
+#             code_list = json.loads(jcodes.read())
+#             jcodes.close()
+#         elif file == 'restraint.json':
+#             jfiles = open('restraint.json')
+#             restraint_list = json.loads(jfiles.read())
+#             jfiles.close()
 
-    except FileNotFoundError as exc:  # create file not exists
-        print('InsertJson Error --> ', FileNotFoundError)
-        pass
+#     except FileNotFoundError as exc:  # create file not exists
+#         print('InsertJson Error --> ', FileNotFoundError)
+#         pass
 
 def tupleDateFROM_ISO(d):  # get just date from ISO datetime format '2022-01-05T10:53:13.00'
     tPosition = d.index('T')
@@ -396,7 +418,8 @@ def verifyCode(code):
                              "CoreSim":config['sim']['value'],"timestamp":
                              rtc.datetime()}
 
-                insertJson(event_pkg,'events.json')
+                # insertJson(event_pkg,'events.json')
+                jsonTools.updJson('i','events.json','events',event_pkg,'')
                 # gsm.write('AT+CCLK?\r\n')
                 utime.sleep(1)
 
@@ -731,7 +754,8 @@ def simResponse(timer):
                 api_data = {"userId": msg[3], "date": msg[2],
                             "code": msg[1], "visitorSim": msg[4],
                             "codeId": msg[5]}
-                insertJson(api_data, 'codes.json')
+                # insertJson(api_data, 'codes.json')
+                jsonTools.updJson('i', 'codes.json','codes', api_data, '')
                 cleanCodes(1, '')
 
                 # ----- Update available codes  -----
@@ -739,16 +763,19 @@ def simResponse(timer):
                 #sendCodeToVisitor(msg[1],msg[4])
 
             elif msg[0].strip() == 'locked':
-                if not verifyRestraint(msg[4]):
+                # if not verifyRestraint(msg[4]):
+                if not jsonTools.updJson('r', 'restraint.json','uuid', msg[3], ''):
                     api_data = { "name": msg[1], "email": msg[2], "uuid": msg[3],
                                 "house": msg[4].rstrip('\r\n'),
                                 "local": getLocalTimestamp()}
-                    insertJson(api_data, 'restraint.json')
+                    # insertJson(api_data, 'restraint.json')
+                    jsonTools.updJson('i', 'restraint.json','user', api_data, '')
             elif msg[0].strip() == 'unlocked':
                 api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
                             "house": msg[4].rstrip('\r\n'),
                             "date": getLocalTimestamp()}
-                unblockUser(msg[3])
+                # unblockUser(msg[3])
+                jsonTools.updJson('d','restraint.json','uuid',msg[3],'')
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
@@ -772,6 +799,9 @@ def simResponse(timer):
                 softReset()
             elif msg[0] == 'cfgCHG':
                 alterConfig(msg[1], msg[2],msg[3])
+            elif msg[0] == 'setOpenCode':
+                jsonTools.updJson('c','config.json','openByCode',msg[1],'')
+
             # elif msg[0] == 'post':
             #     reg_code_event('62f05aaffcc8845454760252', msg[1])
 
@@ -795,6 +825,7 @@ def simResponse(timer):
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
+                gsm_status.append({'OpenByCode': openByCode})
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
                         + '\n locked: ' + pkgListAccess())
@@ -912,7 +943,7 @@ try:
 
 except OSError:  # Open failed
     print('Error--> ', OSError)
-#     insertJson('','codes.json')
+
 #endregion ---------------------------------------------------
 
 # region ----------------    Open ACCESS JSON files   --------------------
@@ -924,7 +955,6 @@ try:
 
 except OSError:  # Open failed
     print('Error--> ', OSError)
-#     insertJson('','codes.json')
 
 # endregion  -----------------------------
 

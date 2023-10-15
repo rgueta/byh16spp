@@ -1,7 +1,6 @@
 {
 	"app" : {
-		"_comment":" gin branch --> alert_open_event",
-		"version": "1.5",
+		"version": "1.0.5",
 		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
@@ -19,7 +18,7 @@
 		"show_code": true,
 		"demo" : true,
 		"pwdRST": "123456",
-		"openByCode" : "gate", ">>> Comment, alertate value":"magnet"
+		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate"
 		},
 	"sim":{
 		"value":"+526642032532",
