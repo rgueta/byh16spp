@@ -14,9 +14,11 @@ import jsonTools
 
 # region --------  Setup config json file  ------------------
 
+
 conf = open('config.json')
 config = json.loads(conf.read())
 conf.close()
+
 # endregion ----------------
 
 # region --------  Setup Events json file  ------------------
@@ -123,6 +125,8 @@ incoming_calls = config['sim']['incoming_calls']
 
 
 # region -------- Configuration  -------------------------------------
+
+
 def alterConfig(key1,key2,value):
     with open('config.json','r+',encoding ='utf8') as cfile:
         json_data = json.load(cfile)
@@ -689,6 +693,7 @@ def simResponse(timer):
     global Today
     global gsm_status
     global sendStatus
+    global openByCode
 
     msg = ''
     # try:
@@ -801,6 +806,7 @@ def simResponse(timer):
                 alterConfig(msg[1], msg[2],msg[3])
             elif msg[0] == 'setOpenCode':
                 jsonTools.updJson('c','config.json','openByCode',msg[1],'')
+                openByCode = config['app']['openByCode']
 
             # elif msg[0] == 'post':
             #     reg_code_event('62f05aaffcc8845454760252', msg[1])
