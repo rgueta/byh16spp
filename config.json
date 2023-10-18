@@ -16,7 +16,7 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : true,
+		"demo" : false,
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate"
 		},
