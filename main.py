@@ -48,6 +48,11 @@ show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
 version_app = config['app']['version']
 openByCode = config['app']['openByCode']
+_settingsCode = config['app']['settingsCode']
+pwdRST = config['app']['pwdRST']
+settingsMode = False
+settingsCode = ''
+readyToConfig = False
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
@@ -99,7 +104,7 @@ oled1.rotate(2)
 KEY_UP = const(0)
 KEY_DOWN = const(1)
 
-MATRIX = config['keypad_matrix']
+MATRIX = config['keypad_matrix']['hardPlastic']
 ROWS = config['pi_pins']['keypad_rows']
 COLS = config['pi_pins']['keypad_cols']
 
@@ -126,7 +131,21 @@ incoming_calls = config['sim']['incoming_calls']
 
 # region -------- Configuration  -------------------------------------
 
+def changeSetting(value):
+    global MATRIX
+    # keypad  -----------------------------------
+    if value == '1': # set matrix for flex keypad
+        MATRIX = config['keypad_matrix']['flex']
+    elif value == '2': # set matrix for flex keypad
+        MATRIX = config['keypad_matrix']['hardPlastic']
 
+    # debug -----------------------------------
+    elif value == '10':
+        alterConfig('app','debugging',True)
+    elif value == '11':
+        alterConfig('app','debugging',False)
+
+# ej: alterConfig('app','debugging',False)
 def alterConfig(key1,key2,value):
     with open('config.json','r+',encoding ='utf8') as cfile:
         json_data = json.load(cfile)
@@ -201,6 +220,22 @@ def showVersion(msg):
     oled1.text(msg + '...', 1, 0)
     oled1.show()
     utime.sleep(3)
+
+def printHeader():
+    oled1.fill(0)
+    oled1.text("* <-", 1, 0)
+    oled1.text(Today[-2:], 45, 0)
+    oled1.text('# enter', 75, 0)
+    if len(active_codes) > 0:
+        oled1.text('..', 1, 9)
+
+def printHeaderSettings():
+    oled1.fill(0)
+    oled1.text("* <-", 1, 0)
+    oled1.text(Today[-2:], 45, 0)
+    oled1.text('config', 1, 9)
+    oled1.text('# enter', 75, 0)
+    oled1.show()
 
 def ShowMainFrame():
     oled1.fill(0)
@@ -282,6 +317,7 @@ def InitKeypad():
         for col in range(0, 4):
             row_pins[row].low()
 
+# region  few commented because new tools.py -------------------------------
 
 # def unblockUser(uuid):
     # global restraint_list
@@ -344,6 +380,10 @@ def InitKeypad():
 #     except FileNotFoundError as exc:  # create file not exists
 #         print('InsertJson Error --> ', FileNotFoundError)
 #         pass
+
+
+# endregion   -------------------------------------
+
 
 def tupleDateFROM_ISO(d):  # get just date from ISO datetime format '2022-01-05T10:53:13.00'
     tPosition = d.index('T')
@@ -586,6 +626,9 @@ def PollKeypad(timer):
     key = None
     global code
     global code_hide
+    global settingsCode
+    global settingsMode
+    global readyToConfig
     for row in range(4):
         for col in range(4):
             row_pins[row].high()
@@ -598,21 +641,132 @@ def PollKeypad(timer):
                 key = KEY_UP
             row_pins[row].low()
             if key == KEY_DOWN:
-                if MATRIX[row][col] == '*' and code != '00':
-                    if len(code) > 0:
+                if MATRIX[row][col] == '*':
+                    if len(code) > 0 and settingsMode == False:
                         code = code[0:-1]
                         code_hide = code_hide[0:-1]
+                        oled1.fill(0)
+                        printHeader()
+                        oled1.text('Codigo: ' + code, 1, 22)
+                        oled1.show()
+                        break
+                    elif len(code) > 0 and settingsMode == True and readyToConfig == True:
+                        code = code[0:-1]
+                        oled1.fill(0)
+                        printHeaderSettings()
+                        oled1.text('Code: ' + code, 1, 22)
+                        oled1.show()
+                        break
+                    elif len(settingsCode) >= len(_settingsCode):
+                        settingsCode=''
+                        oled1.fill(0)
+                        printHeader()
+                        oled1.text("Codigo:              ", 1, 22)
+                        oled1.show()
+                        break
+                    else:
+                        settingsCode = settingsCode + MATRIX[row][col]
+                        if show_code:
+                            oled1.text("Codigo: " + settingsCode, 1, 22)
+                            oled1.show()
+                        print("Codigo:" + settingsCode)
+                        break
                 elif MATRIX[row][col] == '#':
-                    if len(code) > 5:
+                    if len(code) > 5 and settingsMode == False:
                         my_timer = 0
                         cleanCodes(1, '')
                         verifyCode(code)
-                    elif code == '00*': # SOFT RESET
-                        softReset()
-                    elif len(code) > 0 and code == '00*0':
-                        code = code_hide = ''
-                        oled1.text("Codigo: ", 1, 22)
-                    elif len(code) > 0 and code != '00*':
+                        # Configuration Password verification -----------------------
+                    elif len(code) > 0 and settingsMode == True and readyToConfig == False:
+                        if code == pwdRST:
+                            readyToConfig = True
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text("Pwd: OK         ", 1, 22)
+                            oled1.show()
+                            song('ok')
+                            utime.sleep(3)
+                            printHeaderSettings()
+                            oled1.text("Code:           ", 1, 22)
+                            oled1.show()
+                            print('pwd ok')
+                            code = ''
+                        else:
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text("Pwd: Error         ", 1, 22)
+                            oled1.show()
+                            song('fail')
+                            utime.sleep(3)
+                            printHeaderSettings()
+                            oled1.text("Pwd:         ", 1, 22)
+                            oled1.show()
+                            print('pwd error')
+                            code = ''
+                    elif len(code) > 0 and settingsMode == True and readyToConfig == True:
+                        changeSetting(code)
+                        oled1.text('Applying code ' + code, 1, 22)
+                        oled1.show()
+
+                        utime.sleep(4)
+                        song('ok')
+                        oled1.fill(0)
+                        printHeaderSettings()
+                        oled1.text('Code: ', 1, 22)
+                        oled1.show()
+                        code = ''
+                        break
+                    elif settingsCode == _settingsCode and settingsMode == False:
+                        settingsMode = True
+                        song('ok')
+                        printHeaderSettings()
+                        oled1.text("Pwd:                  " , 1, 22)
+                        oled1.show()
+                        settingsCode = ''
+                        break
+                        # quit settings mode
+                    elif settingsCode == _settingsCode and settingsMode == True and readyToConfig == True:
+                        settingsMode = False
+                        readyToConfig = False
+                        oled1.fill(0)
+                        printHeaderSettings()
+                        oled1.text('Quit settings mode', 1, 22)
+                        oled1.show()
+                        utime.sleep(3)
+                        ShowMainFrame()
+                        settingsCode = ''
+                        code = ''
+                        break
+                    elif settingsCode == _settingsCode and settingsMode == True:
+                        settingsMode = False
+                        ShowMainFrame()
+                        settingsCode = ''
+                        code = ''
+                        break
+                    # verification correct settings code
+                    elif len(settingsCode) >= len(_settingsCode) and settingsMode == False:
+                        settingsCode=''
+                        oled1.fill(0)
+                        printHeader()
+                        oled1.text('Codigo:                ', 1, 22)
+                        oled1.show()
+                        break
+                    elif code == '':
+                        settingsCode = settingsCode + MATRIX[row][col]
+                        oled1.text("Codigo: " + settingsCode, 1, 22)
+                        oled1.show()
+                        print("Codigo:" + settingsCode)
+                        break
+                    elif len(code) > 0 and readyToConfig == True:
+                        code = ''
+                        song('ok')
+                        utime.sleep(3)
+                        oled1.fill(0)
+                        printHeader()
+                        oled1.text('Code:              ', 1, 22)
+                        oled1.show()
+                        break
+                    elif len(code) > 0:
                         oled1.fill(0)
                         printHeader()
                         oled1.text('Incompleto', 5, 22)
@@ -628,32 +782,35 @@ def PollKeypad(timer):
                         warning_message_active = True
                         break
                     code = code_hide = ''
-                else:
+        
+        # region none #, * char  ----------------------------------------
+                elif settingsMode == True and readyToConfig == False:
+                    code = code + MATRIX[row][col]
+                    oled1.text("Pwd: " + code, 1, 22)
+                    oled1.show()
+                    print("Codigo:" + code)
+                elif settingsMode == True and readyToConfig == True:
+                    code = code + MATRIX[row][col]
+                    oled1.fill(0)
+                    printHeaderSettings()
+                    oled1.text("Code: " + code, 1, 22)
+                    oled1.show()
+                    print("Codigo:" + code)
+                elif MATRIX[row][col] != '*' or MATRIX[row][col] != '#':
                     code = code + MATRIX[row][col]
                     code_hide = code_hide + code_hide_mark
-                oled1.fill(0)
-                oled1.text("* <-", 1, 0)
-                oled1.text(Today[-2:], 45, 0)
-                oled1.text('# enter', 75, 0)
-                if show_code:
-                    oled1.text("Codigo: " + code, 1, 22)
-                else:
-                    oled1.text("Codigo: " + code_hide, 1, 22)
-                if (len(active_codes) > 0):
-                    oled1.text('..', 1, 9)
-                oled1.show()
-                last_key_press = MATRIX[row][col]
-                if debugging:
-                    print("Codigo:" + code)
+                    if show_code:
+                        oled1.text("Codigo: " + code, 1, 22)
+                    else:
+                        oled1.text("Codigo: " + code_hide, 1, 22)
+                    if (len(active_codes) > 0) and settingsMode == False and readyToConfig == False:
+                        oled1.text('..', 1, 9)
+                    oled1.show()
+                    last_key_press = MATRIX[row][col]
+                    if debugging:
+                        print("Codigo:" + code)
+    #endregion  ------------------------
 
-
-def printHeader():
-    oled1.fill(0)
-    oled1.text("* <-", 1, 0)
-    oled1.text(Today[-2:], 45, 0)
-    oled1.text('# enter', 75, 0)
-    if len(active_codes) > 0:
-        oled1.text('..', 1, 9)
 
 
 def getLocalTimestamp():
@@ -663,7 +820,7 @@ def getLocalTimestamp():
           str(timestamp[12:14]) + ':' + str(timestamp[15:17])))
     return tsf
 
-
+# region send_data_to_broker
 # def send_data_to_broker(data):
 #     print("Attempting to send data to broker")
 #     max_mqtt_attempts = 5
@@ -686,6 +843,7 @@ def getLocalTimestamp():
 #                 connected = False
 #             attempts += 1
 #             utime.sleep(3)
+# endregion
 
 def simResponse(timer):
     # def simResponse():
@@ -858,8 +1016,9 @@ def simResponse(timer):
     #     print('Error -->', NameError)
     #     pass
 
-
 # endregion ------ Timers  -----------------------------------
+
+
 
 
 def UserIsBlocked(uuid):
