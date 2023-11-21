@@ -118,7 +118,6 @@ col_pins = [Pin(pin_name, pull=Pin.PULL_DOWN) for pin_name in COLS]
 send_code_events = config['sim']['send_code_events']
 admin_sim = config['app']['admin_sim'].split(',')
 apn = config['sim']['apn']
-app_version = config['app']['app_version']
 serial_port = config['sim']['serial_port']
 serial_baud = config['sim']['serial_baud']
 serial_timeout = config['sim']['serial_timeout']
@@ -127,37 +126,30 @@ api_get_line = config['sim']['api_get_line']
 incoming_calls = config['sim']['incoming_calls']
 
 
-
-
 # region -------- Configuration  -------------------------------------
 
 def changeSetting(value):
     global MATRIX
+
     # keypad  -----------------------------------
-    if value == '1': # set matrix for flex keypad
+    if value == '00': # reboot
+        oled1.fill(0)
+        printHeaderSettings()
+        oled1.text('Booting.. ', 1, 22)
+        oled1.show()
+        utime.sleep(3)
+        softReset()
+    elif value == '1': # set matrix for flex keypad
         MATRIX = config['keypad_matrix']['flex']
     elif value == '2': # set matrix for flex keypad
         MATRIX = config['keypad_matrix']['hardPlastic']
 
     # debug -----------------------------------
-    elif value == '10':
-        alterConfig('app','debugging',True)
-    elif value == '11':
-        alterConfig('app','debugging',False)
-
-# ej: alterConfig('app','debugging',False)
-def alterConfig(key1,key2,value):
-    with open('config.json','r+',encoding ='utf8') as cfile:
-        json_data = json.load(cfile)
-        json_data[key1][key2] = value
-        try:
-            json.dump(json_data, open("config.json", "w"))
-            if (debugging):
-                print('Done alterConfig ----------------')
-        except OSError:
-            print("Oops!", OSError, "occurred.")
-            print("Next entry.")
-            print()
+    elif value == '10':  #debug true
+        jsonTools.updJson('c','config.json','debugging',True,'')
+    elif value == '11': #debug false
+        jsonTools.updJson('c','config.json','debugging',False,'')
+    
 # endregion
 
 # initial gprs configuration
@@ -730,7 +722,6 @@ def PollKeypad(timer):
                         readyToConfig = False
                         oled1.fill(0)
                         printHeaderSettings()
-                        oled1.text('Quit settings mode', 1, 22)
                         oled1.show()
                         utime.sleep(3)
                         ShowMainFrame()
@@ -810,7 +801,6 @@ def PollKeypad(timer):
                     if debugging:
                         print("Codigo:" + code)
     #endregion  ------------------------
-
 
 
 def getLocalTimestamp():
@@ -957,11 +947,11 @@ def simResponse(timer):
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
             elif msg[0] == 'rst':
-                alterConfig('app','debugging',False)
+                jsonTools.updJson('c','config.json','debugging',False,'')
                 showMsg('Reset')
                 softReset()
             elif msg[0] == 'cfgCHG':
-                alterConfig(msg[1], msg[2],msg[3])
+                jsonTools.updJson('c','config.json', msg[1], msg[2], msg[3])
             elif msg[0] == 'setOpenCode':
                 jsonTools.updJson('c','config.json','openByCode',msg[1],'')
                 openByCode = config['app']['openByCode']
@@ -1017,9 +1007,6 @@ def simResponse(timer):
     #     pass
 
 # endregion ------ Timers  -----------------------------------
-
-
-
 
 def UserIsBlocked(uuid):
     restraint_list = {}

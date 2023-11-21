@@ -7,7 +7,7 @@ config = json.loads(conf.read())
 
 if "__name__" == "__main__":
     #run locally
-    print()
+    print('initSetup run locally')
 
 def Initial():
     print('initSetup..')
