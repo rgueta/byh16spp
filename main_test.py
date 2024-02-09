@@ -15,6 +15,16 @@ sim800Timer = Timer()
 sim800Timer.init(freq=2, mode=Timer.PERIODIC, callback=simResponse)
 
 # Init gsm
+apn = 'internet.itelcel.com'
+apn_usr = 'webgpr'
+apn_pwd = 'webgprs2002'
+gsm.write('AT+CSTT="%s","%s","%s"\r' % (apn,apn_usr,apn_pwd))
+utime.sleep(1)
+gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r')
+utime.sleep(1)
+gsm.write('AT+SAPBR=3,1,"APN","%s"\r' % apn)
+utime.sleep(1)
+
 gsm.write('AT+CMGF=1\r')
 utime.sleep(1)
 

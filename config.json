@@ -1,6 +1,6 @@
 {
 	"app" : {
-		"version": "1.0.6",">>> Comment": "branch codes_setting",
+		"version": "1.0.8",">>> Comment": "branch codes_setting",
 		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
@@ -14,12 +14,12 @@
 		"timeZone" : "America/Tijuana",
 		"dateTimeFormat" : "%Y-%m-%d %H:%M:%S",
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
-		"debugging": false,
+		"debugging": true,
 		"show_code": true,
 		"demo" : false,
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
-		"settingsCode" : "**#*" 
+		"settingsCode" : "1324" 
 		},
 	"sim":{
 		"value":"+526642032532",
@@ -84,7 +84,7 @@
 				["2", "5", "8", "0"], 
 				["3", "6", "9", "#"], 
 				["A", "B", "C", "D"]
-			  ]
+			  ],"default":"hardPlastic"
 			},
 	"pi_pins" : {
 		"gsm_TX" : 0,
