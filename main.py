@@ -922,6 +922,7 @@ def simResponse(timer):
                 # insertJson(api_data, 'codes.json')
                 jsonTools.updJson('i', 'codes.json','codes', api_data, '')
                 cleanCodes(1, '')
+                printHeader()
 
                 # ----- Update available codes  -----
                 #codesAvailable()
