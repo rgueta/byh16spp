@@ -476,16 +476,15 @@ def verifyCode(cap_code):
                 print('event registered locally')
             break
 
-        elif i + 1 == len(active_codes['codes']):
+        # elif i + 1 == len(active_codes['codes']):
+        else:
             global warning_message_active
             print('codigo no valido!')
-            # if show_code:
-            #     oled1.text("Codigo: " + code, 1, 22)
-            # else:
-            #     oled1.text("Codigo: " + code_hide, 1, 22)
-            # oled1.text("Codigo: " + code_hide, 1, 22)
             warning_message_active = True
             song('fail')
+            ShowMainFrame()
+            code = ''
+            
 
 
 def reg_code_event(code_id):
@@ -773,6 +772,7 @@ def PollKeypad(timer):
                         cleanCodes(1, '')
                         verifyCode(code)
                         break
+                    # Wrong code less than 6 len
                     elif len(code) > 0 and settingsMode == False and readyToConfig == False:
                         oled1.fill(0)
                         printHeader()
@@ -922,7 +922,7 @@ def simResponse(timer):
                 # insertJson(api_data, 'codes.json')
                 jsonTools.updJson('i', 'codes.json','codes', api_data, '')
                 cleanCodes(1, '')
-                printHeader()
+                ShowMainFrame()
 
                 # ----- Update available codes  -----
                 #codesAvailable()
