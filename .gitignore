@@ -6,5 +6,10 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 .history/*
+<<<<<<< HEAD
 .idea
 borrar.*
+=======
+venv
+.idea/
+>>>>>>> codes_setting

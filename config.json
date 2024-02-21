@@ -1,6 +1,6 @@
 {
 	"app" : {
-		"version": "1.0.5",
+		"version": "1.0.8",">>> Comment": "branch codes_setting",
 		"coreId" : "60afd3955d8280dc19460c3a",
 		"door_open_countdown" : 10,
 		"pedestrian_alert_msg":"Puerta peatonal abierta !",
@@ -18,7 +18,8 @@
 		"show_code": true,
 		"demo" : false,
 		"pwdRST": "123456",
-		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate"
+		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
+		"settingsCode" : "1324" 
 		},
 	"sim":{
 		"value":"+526642032532",
@@ -73,13 +74,18 @@
 		"phone_speaker_icon" : 62112,
 		"warning_text_color" : "yellow"
 		},
-	"keypad_matrix" :
-			 [
+	"keypad_matrix" : { "flex" : [
 			 	["1","2","3","A"],
 			 	["4","5","6","B"],
 			 	["7","8","9","C"],
 			 	["*","0","#","D"]
-			  ],
+			  ],"hardPlastic" : [
+				["1", "4", "7", "*"], 
+				["2", "5", "8", "0"], 
+				["3", "6", "9", "#"], 
+				["A", "B", "C", "D"]
+			  ],"default":"hardPlastic"
+			},
 	"pi_pins" : {
 		"gsm_TX" : 0,
 		"gsm_RX" : 1,
