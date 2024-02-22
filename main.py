@@ -476,8 +476,7 @@ def verifyCode(cap_code):
                 print('event registered locally')
             break
 
-        # elif i + 1 == len(active_codes['codes']):
-        else:
+        elif i + 1 == len(active_codes['codes']):
             global warning_message_active
             print('codigo no valido!')
             warning_message_active = True

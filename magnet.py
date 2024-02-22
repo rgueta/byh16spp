@@ -15,10 +15,6 @@ else:
     pin = config['pi_pins']['gpio_magnet']
     print('Activating magnet..pin --> ', pin)
     magnetPin = Pin(pin, Pin.OUT)
-    
-    magnetPin.value(0)
-    magnetPin.value(1)
-    utime.sleep(config['pi_pins']['gpio_magnet_delay'])
     magnetPin.value(0)
 
 def Activate():
