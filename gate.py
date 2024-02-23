@@ -15,10 +15,6 @@ if demo:
 else:
     pin = config['pi_pins']['gpio_gate_door']
     gatePin = Pin(pin, Pin.OUT)
-
-    gatePin.value(0)
-    gatePin.value(1)
-    utime.sleep(config['pi_pins']['gpio_gate_delay'])
     gatePin.value(0)
 
 def Activate():

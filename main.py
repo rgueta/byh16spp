@@ -860,9 +860,9 @@ def simResponse(timer):
     if gsm.any() > 0:
         response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
         if debugging:
-            print(response)
+            print('simResponse debugging, response: ' + response)
         if 'ERROR' in response:
-            print('Error detected')
+            print('simResponse,Error detected: ' + response)
         elif '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')

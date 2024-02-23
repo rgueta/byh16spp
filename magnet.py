@@ -13,7 +13,6 @@ if demo:
     pwm.freq(50)
 else:
     pin = config['pi_pins']['gpio_magnet']
-    print('Activating magnet..pin --> ', pin)
     magnetPin = Pin(pin, Pin.OUT)
     magnetPin.value(0)
 
