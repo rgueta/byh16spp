@@ -1,9 +1,8 @@
 import json
-
 ########################################################
 # mov       -> movement i:insert, d:delete, c:change
 # file      -> json file name to update
-# key       -> find key
+# key       -> key to find
 # value     -> value to change
 # newValue  -> new value to change previous value
 # Desc: Generic Module [crud] for JSON files
