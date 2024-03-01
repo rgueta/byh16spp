@@ -95,13 +95,10 @@ sda1 = config['pi_pins']['gpio_oled_sda1']
 WIDTH = config['screen']['width']
 HEIGHT = config['screen']['height']
 
-# i2c = I2C(0)
 i2c1 = I2C(1, scl=Pin(scl1), sda=Pin(sda1), freq=400000)
-# i2c2 = I2C(0, scl=Pin(scl2), sda=Pin(sda2), freq=400000)
 
 oled1 = SSD1306_I2C(WIDTH, HEIGHT, i2c1)
-oled1.rotate(2)
-# oled2 = SSD1306_I2C(WIDTH, HEIGHT, i2c2)
+# oled1.rotate(2)
 
 # endregion -------------------------------------------------------
 
