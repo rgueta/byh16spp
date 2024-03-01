@@ -57,6 +57,7 @@ settingsCode = ''
 readyToConfig = False
 cmdLineTitle= 'Codigo:             '
 code = ''
+screen_saver = 0
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
@@ -222,6 +223,10 @@ def showVersion(msg):
     oled1.text(msg + '...', 1, 0)
     oled1.show()
     utime.sleep(3)
+
+def screenSaver():
+    oled1.fill(0)
+    oled1.show()
 
 def printHeader():
     oled1.fill(0)
@@ -638,6 +643,7 @@ def PollKeypad(timer):
     global settingsMode
     global readyToConfig
     global settingsCode
+    global screen_saver
     for row in range(4):
         for col in range(4):
             row_pins[row].high()
@@ -650,6 +656,9 @@ def PollKeypad(timer):
                 key = KEY_UP
             row_pins[row].low()
             if key == KEY_DOWN:
+                # Screen wakeup,screen On  ---------------------------------------
+                screen_saver = 0
+                printHeader()
                 if MATRIX[row][col] == '*':
                     if len(code) > 0:
                         code = code[0:-1]
@@ -817,6 +826,11 @@ def PollKeypad(timer):
                 last_key_press = MATRIX[row][col]
                 if debugging:
                     print("Codigo:" + code)
+            else:  #Screen saver counter start -----------------------------------
+                if screen_saver <= 2000:
+                    screen_saver += 1
+                    if screen_saver == 2000:# ------ Screen Off --------------
+                        screenSaver()
 
 def getLocalTimestamp():
     global timestamp
