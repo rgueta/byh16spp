@@ -299,6 +299,11 @@ def init_gsm():
         utime.sleep(1)
 
 
+def getPhoneNum():
+    gsm.write('AT+CNUM?\r')
+    utime.sleep(0.7)
+
+
 def softReset():
     reset()
 
@@ -870,6 +875,7 @@ def simResponse(timer):
     global openByCode
     global MATRIX
     global cmdLineTitle
+    global debugging
 
     msg = ''
     # try:
@@ -983,27 +989,29 @@ def simResponse(timer):
                 if(bool(msg[2])):
                     msg[2] = str_to_bool(msg[2]);
                 
+                if msg[1] == 'setKeypad':
+                    oled1.fill(0)
+                    oled1.text(msg[2], 2, 15)
+                    oled1.show()
+                    utime.sleep(3)
+                    MATRIX = config['keypad_matrix'][msg[2]]
+                    jsonTools.updJson('c','config.json','keypad_matrix','default',msg[2])
+                    ShowMainFrame()
+                    return;
+                
                 if len(msg) == 4:
                     if(bool(msg[3])):
                         msg[3] = str_to_bool(msg[3]);
+                    
                     jsonTools.updJson('c','config.json', msg[1], msg[2], msg[3])
                 else:
                     jsonTools.updJson('c','config.json', msg[1], msg[2],'')
-            elif msg[0] == 'setOpenCode':
-                jsonTools.updJson('c','config.json','openByCode',msg[1],'')
                 
-                openByCode = msg[1]
-            elif msg[0] == 'setKeypad':
-                oled1.fill(0)
-                oled1.text(msg[1], 2, 15)
-                oled1.show()
-                utime.sleep(3)
-                MATRIX = config['keypad_matrix'][msg[1]]
-                jsonTools.updJson('c','config.json','keypad_matrix','default',msg[1])
-                ShowMainFrame()
-                
-            # elif msg[0] == 'post':
-            #     reg_code_event('62f05aaffcc8845454760252', msg[1])
+                if msg[1] == 'debug':
+                    debugging = msg[2]
+
+                if msg[1] == 'openByCode':
+                    openByCode = msg[2]
 
         elif '+CSQ:' in response:
             pos = response.index(':')
