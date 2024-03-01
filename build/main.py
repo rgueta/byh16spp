@@ -589,10 +589,8 @@ def simResponse(timer):
     if gsm.any() > 0:
         #         response = gsm.read().decode().rstrip('\r\n')
         response = str(gsm.readline(), encoding).rstrip('\r\n')
-        print(response)
-        #         if 'OK':
-        #             if debugging:
-        #                 print(response)
+        if debugging:
+            print(response)
         if '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
@@ -643,7 +641,8 @@ def simResponse(timer):
                 msg = response[index + 2:lenght].split(',')
             else:
                 msg = response.split(",")
-            print('GSM Message: ', msg)
+            if debugging:
+                print('GSM Message: ', msg)
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
                 msg[3] = msg[3].rstrip('\r\n')
@@ -688,7 +687,7 @@ def simResponse(timer):
                 sendStatus = True
                 signal_Status()
             elif msg[0] == 'active_codes':
-                sendSMS('codes available --> ' + pkgListCodes())
+                sendSMS('active codes: ' + pkgListCodes())
         elif '+CSQ:' in response:
             pos = response.index(':')
             # global response_return

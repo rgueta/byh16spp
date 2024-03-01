@@ -33,7 +33,10 @@ def updJson(mov,file,key,value,newValue):
                     jfiles.close()
                     break
                 elif mov == 'c':   # change
-                    print('Change action pending key -->',item,' : ',file_list[key],' with --> ', value)
+                    file_list[key][value] = newValue
+                    f = open(file,"w")
+                    json.dump(file_list, f)
+                    f.close()
                     break
                 break
             for j, jitem in enumerate(file_list[item]):

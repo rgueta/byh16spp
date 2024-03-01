@@ -181,6 +181,12 @@ def signal_Status(titulo):
 
 # region----- Functions --------------------
 
+def str_to_bool(s):
+    if s.lower() == 'true':
+        return True
+    elif s.lower() == 'false':
+        return False
+
 # region ----------  show command received ------------------
 def showMsg(msg):
     oled1.fill(0)
@@ -419,8 +425,6 @@ def cleanCodes(type, code):
                                   int(item['date'][14:16]), int(item['date'][17:19]),
                                   0,0))) / 86400  # type: ignore
 
-            print('now --> ', now)
-            print('dtcode --> ', dtcode)
             if dtcode < now :
             # instead of days_between check it out
             # days_between = daysBetween(tupleDateFROM_ISO(item['date']), tupleToday)
@@ -429,8 +433,8 @@ def cleanCodes(type, code):
             # if days_between < 0:
 
                 # del code_list['codes'][i]
-
-                print('Code deleted ----> ', item['code'])
+                if debugging:
+                    print('Code deleted ----> ', item['code'])
             else:
                 active_codes['codes'].append(item)
 
@@ -444,6 +448,8 @@ def cleanCodes(type, code):
     f = open("codes.json", "w")
     json.dump(active_codes, f)
     f.close()
+    ShowMainFrame()
+
 
 
 def verifyCode(cap_code):
@@ -963,17 +969,27 @@ def simResponse(timer):
                 showMsg('Reset')
                 softReset()
             elif msg[0] == 'cfgCHG':
-                jsonTools.updJson('c','config.json', msg[1], msg[2], msg[3])
+                if(bool(msg[2])):
+                    msg[2] = str_to_bool(msg[2]);
+                
+                if len(msg) == 4:
+                    if(bool(msg[3])):
+                        msg[3] = str_to_bool(msg[3]);
+                    jsonTools.updJson('c','config.json', msg[1], msg[2], msg[3])
+                else:
+                    jsonTools.updJson('c','config.json', msg[1], msg[2],'')
             elif msg[0] == 'setOpenCode':
                 jsonTools.updJson('c','config.json','openByCode',msg[1],'')
+                
                 openByCode = msg[1]
             elif msg[0] == 'setKeypad':
-                MATRIX = config['keypad_matrix'][msg[1]]
-                oled1.text(msg[1] + '        ', 1, 22)
+                oled1.fill(0)
+                oled1.text(msg[1], 2, 15)
                 oled1.show()
                 utime.sleep(3)
-                oled1.text(cmdLineTitle, 1, 22)
-                oled1.show()
+                MATRIX = config['keypad_matrix'][msg[1]]
+                jsonTools.updJson('c','config.json','keypad_matrix','default',msg[1])
+                ShowMainFrame()
                 
             # elif msg[0] == 'post':
             #     reg_code_event('62f05aaffcc8845454760252', msg[1])
