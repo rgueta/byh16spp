@@ -16,7 +16,7 @@ def updJson(mov,file,key,value,newValue):
     try:
         jsonObj = open(file, "r")
         file_list = json.loads(jsonObj.read())
-        jsonObj.close()    
+        jsonObj.close()
         for item in file_list:
             if item == key:
                 if mov == 'r': #read
@@ -51,7 +51,9 @@ def updJson(mov,file,key,value,newValue):
                         print('Insert action pending key -> ',jitem,' : ',file_list[item],' with --> ', value)
                         break
                     elif mov == 'c':   # change
-                        file_list[item][key] = value
+                        print('file_list[jitem]  -> ', file_list[jitem]);
+                        print('upd action key, value, newValue -> ', key,', ', value, ', ', newValue);
+                        file_list[jitem] = value
                         f = open(file,"w")
                         json.dump(file_list, f)
                         f.close()
@@ -98,6 +100,7 @@ def updJson(mov,file,key,value,newValue):
                             else:
                                 for m, e in enumerate(file_list[item]):
                                     if e[key] == value and mov == 'c':
+                                        print('last upd action key, value, newValue -> ', key,', ', value, ', ', newValue);
                                         file_list[item][m][key] = newValue
                                         f = open(file,"w")
                                         json.dump(file_list, f)

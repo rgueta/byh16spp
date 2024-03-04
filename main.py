@@ -1,6 +1,6 @@
 # from micropython import const
 from micropython import *
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, soft_reset
 import _thread
 from ssd1306 import SSD1306_I2C
 # from umqtt.simple import MQTTClient
@@ -132,6 +132,8 @@ incoming_calls = config['sim']['incoming_calls']
 
 def changeSetting(value):
     global MATRIX
+    global sendStatus
+    applied = False
 
     # keypad  -----------------------------------
     if value == '00': # reboot
@@ -141,16 +143,39 @@ def changeSetting(value):
         oled1.show()
         utime.sleep(3)
         softReset()
+        applied = True
+
+    elif value == '01': # get Sim Info
+        getSimInfo()
+        applied = True
+
+    elif value == '02': # get timestamp
+        updTimestamp()
+        applied = True
+
+    elif value == '03': # get phone number
+        sendStatus = True
+        getPhoneNum()
+        applied = True
+
     elif value == '1': # set matrix for flex keypad
         MATRIX = config['keypad_matrix']['flex']
+        applied = True
+
     elif value == '2': # set matrix for hard plastic keypad
         MATRIX = config['keypad_matrix']['hardPlastic']
+        applied = True
 
     # debug -----------------------------------
     elif value == '10':  #debug true
-        jsonTools.updJson('c','config.json','debugging',True,'')
+        jsonTools.updJson('c','config.json','app', 'debugging', True)
+        applied = True
+
     elif value == '11': #debug false
-        jsonTools.updJson('c','config.json','debugging',False,'')
+        jsonTools.updJson('c','config.json','app', 'debugging', False)
+        applied = True
+
+    return applied
     
 # endregion
 
@@ -299,13 +324,25 @@ def init_gsm():
         utime.sleep(1)
 
 
+def getSimInfo():
+    gsm.write('AT+CCID\r')
+    utime.sleep(2)
+
 def getPhoneNum():
-    gsm.write('AT+CNUM?\r')
-    utime.sleep(0.7)
+    # gsm.write('AT+CNUM\r')
+    gsm.write('AT+CSIM\r')
+    utime.sleep(2)
 
 
 def softReset():
-    reset()
+    import machine
+    rc = machine.reset_cause()
+    print('Reset Cause = ', rc)
+
+    print('Goodbye!\n')
+    machine.soft_reset()
+
+
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -726,16 +763,31 @@ def PollKeypad(timer):
                             code = ''
                             break
                     elif code[0:1] != '#' and settingsMode == True and readyToConfig == True:
-                        changeSetting(code)
-                        oled1.text('Applying code ' + code, 1, 22)
-                        oled1.show()
-                        utime.sleep(4)
-                        song('ok')
-                        oled1.fill(0)
-                        printHeaderSettings()
-                        oled1.text('Code:   ', 1, 22)
-                        oled1.show()
-                        code = ''
+                        if changeSetting(code):
+                            oled1.fill(0)
+                            oled1.text('Applying', 1, 10)
+                            oled1.text('code ' + code, 3, 22)
+                            oled1.show()
+                            utime.sleep(4)
+                            song('ok')
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text('Code:   ', 1, 22)
+                            oled1.show()
+                            code = ''
+                        else:
+                            oled1.fill(0)
+                            oled1.text('Not Applied ', 1, 10)
+                            oled1.text('code ' + code, 3, 22)
+                            oled1.show()
+                            utime.sleep(4)
+                            song('fail')
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text('Code:   ', 1, 22)
+                            oled1.show()
+                            code = ''
+
                         break
                     elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True:
                         oled1.fill(0)
@@ -876,6 +928,7 @@ def simResponse(timer):
     global MATRIX
     global cmdLineTitle
     global debugging
+    global settingsCode
 
     msg = ''
     # try:
@@ -929,10 +982,7 @@ def simResponse(timer):
             else:
                 msg = response.split(",")
             if debugging:
-                print('GSM Message: ' + response)
-
-            # if msg[0].strip() == 'mqtt':
-                # send_data_to_broker({'hello':'test'})
+                print('GSM response: ' + response)
 
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
@@ -986,33 +1036,29 @@ def simResponse(timer):
                 showMsg('Reset')
                 softReset()
             elif msg[0] == 'cfgCHG':
-                if(bool(msg[2])):
-                    msg[2] = str_to_bool(msg[2]);
+
+                oled1.fill(0)
+                oled1.text(msg[2] + ' =', 2, 1)
+                oled1.text(msg[3], 2, 14)
+                oled1.show()
+                utime.sleep(4)
                 
-                if msg[1] == 'setKeypad':
-                    oled1.fill(0)
-                    oled1.text(msg[2], 2, 15)
-                    oled1.show()
-                    utime.sleep(3)
-                    MATRIX = config['keypad_matrix'][msg[2]]
-                    jsonTools.updJson('c','config.json','keypad_matrix','default',msg[2])
-                    ShowMainFrame()
-                    return;
-                
-                if len(msg) == 4:
-                    if(bool(msg[3])):
-                        msg[3] = str_to_bool(msg[3]);
+                if(msg[3] == 'false' or msg[3] == 'true'):
+                    msg[3] = str_to_bool(msg[3])
+                               
+                jsonTools.updJson('c','config.json',msg[1], msg[2], msg[3])
                     
-                    jsonTools.updJson('c','config.json', msg[1], msg[2], msg[3])
-                else:
-                    jsonTools.updJson('c','config.json', msg[1], msg[2],'')
+                if msg[2] == 'openByCode':
+                    openByCode = msg[3]
+                if msg[2] == 'debugging':
+                    debugging = msg[3]
+                if msg[1] == 'keypad_matrix':
+                        MATRIX = config[msg[1]][msg[3]]
+                if msg[2] == 'settingsCode':
+                    settingsCode = msg[3]
+
+                ShowMainFrame()
                 
-                if msg[1] == 'debug':
-                    debugging = msg[2]
-
-                if msg[1] == 'openByCode':
-                    openByCode = msg[2]
-
         elif '+CSQ:' in response:
             pos = response.index(':')
             # global response_return
@@ -1034,6 +1080,9 @@ def simResponse(timer):
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
                 gsm_status.append({'OpenByCode': openByCode})
+                gsm_status.append({'cfgCode': _settingsCode})
+                gsm_status.append({'pwdRST': pwdRST})
+
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
                         + '\n locked: ' + pkgListAccess())
@@ -1044,6 +1093,10 @@ def simResponse(timer):
             pos = response.index(':')
             response_return = response[pos + 4: (pos + 4) + 1]
             cgreg_status = response_return
+        elif '+CNUM:' in response:
+            if sendStatus:
+                sendStatus = False
+                sendSMS('Phone Num: ' + response)
         elif 'OVER-VOLTAGE' in response:  # 4.27v
             sendStatus = True
             showMsg('Temp high')
