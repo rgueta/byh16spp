@@ -282,7 +282,7 @@ def updTimestamp():
     utime.sleep(5)    
 
 def initial():
-    showVersion('v-' + version_app)
+    showVersion('ver. ' + version_app)
     utime.sleep(3)
     global sendStatus
     gsm.write('AT+CCLK?\r')
@@ -297,6 +297,10 @@ def initial():
     # send module status  ---------------
     sendStatus = True
     signal_Status('Reboot')
+    
+    # scree saver    -------------------
+    utime.sleep(5)
+    printHeader()
 
 
 def init_gsm():
@@ -745,7 +749,8 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
-                            print('pwd ok')
+                            if debugging:
+                                print('pwd ok')
                             code = ''
                             settingsCode = ''
                             break
@@ -759,7 +764,8 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
-                            print('pwd error')
+                            if debugging:
+                                print('pwd error')
                             code = ''
                             break
                     elif code[0:1] != '#' and settingsMode == True and readyToConfig == True:
@@ -792,7 +798,7 @@ def PollKeypad(timer):
                     elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True:
                         oled1.fill(0)
                         printHeaderSettings()
-                        oled1.text("get out", 1, 22)
+                        oled1.text("exit settings", 1, 22)
                         oled1.show()
                         song('ok')
                         utime.sleep(3)
@@ -816,7 +822,8 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
-                            print('pwd ok')
+                            if debugging:
+                                print('pwd ok')
                             code = ''
                             settingsCode = ''
                             break
@@ -830,7 +837,8 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
-                            print('pwd error')
+                            if debugging:
+                                print('pwd error')
                             code = ''
                             break
                     # endregion -------------------------------------
@@ -929,6 +937,8 @@ def simResponse(timer):
     global cmdLineTitle
     global debugging
     global settingsCode
+    global _settingsCode
+    global pwdRST
 
     msg = ''
     # try:
@@ -944,14 +954,12 @@ def simResponse(timer):
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
             pos = response.index(':')
             simStatus = response[pos + 4: len(response)]
-            showMsg(simStatus)
             if debugging:
                 print('sim status --> ' + simStatus)
             return simStatus
         elif '+CCLK' in response:  # Get timestamp from GSM network
             global timestamp
             response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
-            showMsg(response)
             if debugging:
                 print('sim status --> ' + response)
             pos = response.index(':')
@@ -1052,10 +1060,19 @@ def simResponse(timer):
                     openByCode = msg[3]
                 if msg[2] == 'debugging':
                     debugging = msg[3]
+                    if debugging:
+                        tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
+                    else:
+                        tim25.deinit()
+
                 if msg[1] == 'keypad_matrix':
                         MATRIX = config[msg[1]][msg[3]]
+
                 if msg[2] == 'settingsCode':
-                    settingsCode = msg[3]
+                    _settingsCode = msg[3]
+                
+                if msg[2] == 'pwdRST':
+                    pwdRST = msg[3]
 
                 ShowMainFrame()
                 
@@ -1112,6 +1129,8 @@ def simResponse(timer):
     # except NameError:
     #     print('Error -->', NameError)
     #     pass
+    if not debugging:
+        led25.value(0)
 
 # endregion ------ Timers  -----------------------------------
 
@@ -1230,8 +1249,10 @@ if simInserted() == "0":
     oled1.text("No SIM", 10, 15)
     oled1.show()
 else:
-
     led25 = Pin(25, Pin.OUT)
+    led25.value(0)
+
+    # Initialize timer led blink
     tim25 = Timer()
 
     # Initialize and set all the rows to low
@@ -1239,13 +1260,13 @@ else:
     #-------  SETUP GSM device  -------------------
     init_gsm()
 
-
     # Initialize timer Used for polling keypad
     timerKeypad = Timer()
 
     # Initialize timer used for sim800L
     timerSim800L = Timer()
 
+    # Activate blink led
     if debugging:
         tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
 
@@ -1259,7 +1280,6 @@ else:
     rtc_date = RTC().datetime()
 
     initial()
-    print('Time after --> ' + str(utime.time()))
     song('initial')
 
 
