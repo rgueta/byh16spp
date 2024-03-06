@@ -1,6 +1,6 @@
 # from micropython import const
 from micropython import *
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, soft_reset
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, soft_reset, reset_cause
 import _thread
 from ssd1306 import SSD1306_I2C
 # from umqtt.simple import MQTTClient
@@ -267,6 +267,7 @@ def printHeaderSettings():
     oled1.show()
 
 def ShowMainFrame():
+    global screen_saver
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
     oled1.text(Today[-2:], 45, 0)
@@ -275,6 +276,8 @@ def ShowMainFrame():
         oled1.text(str(len(active_codes['codes']))+'', 1, 9)
     oled1.text("Codigo: ", 1, 22)
     oled1.show()
+    screen_saver = 0
+
 
 def updTimestamp():
     gsm.write('AT+CCLK?\r')
@@ -340,7 +343,14 @@ def getPhoneNum():
 
 def softReset():
     import machine
-    rc = machine.reset_cause()
+    tim25.deinit()
+    utime.sleep(1)
+    timerSim800L.deinit()
+    utime.sleep(1)
+    timerKeypad.deinit()
+    utime.sleep(1)
+
+    rc = reset_cause()
     print('Reset Cause = ', rc)
 
     print('Goodbye!\n')
@@ -1040,8 +1050,8 @@ def simResponse(timer):
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
             elif msg[0] == 'rst':
-                jsonTools.updJson('c','config.json','debugging',False,'')
                 showMsg('Reset')
+                utime.sleep(1)
                 softReset()
             elif msg[0] == 'cfgCHG':
 
@@ -1233,6 +1243,11 @@ try:
 
 except OSError:  # Open failed
     print('Error--> ', OSError)
+except SystemExit as e:
+    import os
+    print('Error SystemExit --> ', e)
+    os._exit()
+
 
 # endregion  -----------------------------
 
