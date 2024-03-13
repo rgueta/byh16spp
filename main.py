@@ -1,6 +1,6 @@
 # from micropython import const
 from micropython import *
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, soft_reset, reset_cause
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset
 import _thread
 from ssd1306 import SSD1306_I2C
 # from umqtt.simple import MQTTClient
@@ -340,23 +340,22 @@ def getPhoneNum():
     gsm.write('AT+CSIM\r')
     utime.sleep(2)
 
-
 def softReset():
-    import machine
-    tim25.deinit()
+    showMsg('Rebooting')
     utime.sleep(1)
-    timerSim800L.deinit()
-    utime.sleep(1)
-    timerKeypad.deinit()
-    utime.sleep(1)
-
-    rc = reset_cause()
-    print('Reset Cause = ', rc)
-
-    print('Goodbye!\n')
-    machine.soft_reset()
-
-
+    try:
+        reset()
+    except SystemExit:
+        print('Error SystemExit')
+        raise SystemExit
+        
+    except Exception as e:
+        print('Error Exception: ', e)
+        raise
+    
+    except:
+        print('Error Fallback')
+        soft_reset()
 
 def tone(pin, frequency, duration):
     pin.freq(frequency)
@@ -1050,9 +1049,8 @@ def simResponse(timer):
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
             elif msg[0] == 'rst':
-                showMsg('Reset')
-                utime.sleep(1)
                 softReset()
+
             elif msg[0] == 'cfgCHG':
 
                 oled1.fill(0)
@@ -1220,81 +1218,82 @@ def simInserted():
 # endregion ------  functions --------------------------------------------------
 
 
-# region  ----------------    Open CODES JSON files  --------------------
 
-code = ''
-code_hide = ''
 
+#
+# cleanCodes(1, '')  # -- clean by date
+# codesAvailable()
+# print("codes count  --- > ", len(code_list['codes']))
+    
 try:
-    jcodes = open('codes.json')
-    code_list = json.loads(jcodes.read())
+    # region  ----------------    Open CODES JSON files  --------------------
 
-except OSError:  # Open failed
-    print('Error--> ', OSError)
+    code = ''
+    code_hide = ''
 
-#endregion ---------------------------------------------------
+    try:
+        jcodes = open('codes.json')
+        code_list = json.loads(jcodes.read())
 
-# region ----------------    Open ACCESS JSON files   --------------------
+    except OSError:  # Open failed
+        print('Error--> ', OSError)
+
+    try:
+        jaccess = open('restraint.json')
+        restraint_list = json.loads(jaccess.read())
+
+    except OSError:  # Open failed
+        print('Error--> ', OSError)
 
 
-try:
-    jaccess = open('restraint.json')
-    restraint_list = json.loads(jaccess.read())
+    # endregion  -----------------------------
 
+
+    # ---  Check  GSM module sim ------
+    if simInserted() == "0":
+        if debugging:
+            print('Modulo GSM no tiene sim')
+        oled1.fill(0)
+        oled1.text("No SIM", 10, 15)
+        oled1.show()
+    else:
+        led25 = Pin(25, Pin.OUT)
+        led25.value(0)
+
+        # Initialize timer led blink
+        tim25 = Timer()
+
+        # Initialize and set all the rows to low
+        InitKeypad()
+        #-------  SETUP GSM device  -------------------
+        init_gsm()
+
+        # Initialize timer Used for polling keypad
+        timerKeypad = Timer()
+
+        # Initialize timer used for sim800L
+        timerSim800L = Timer()
+
+        # Activate blink led
+        if debugging:
+            tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
+
+        timerSim800L.init(freq=2, mode=Timer.PERIODIC, callback=simResponse)
+        # _thread.start_new_thread(simResponse, ())
+
+        timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
+
+        # ------ Timestamp section   ---------------------
+        rtc = RTC()
+        rtc_date = RTC().datetime()
+
+        initial()
+        song('initial')
+    
 except OSError:  # Open failed
     print('Error--> ', OSError)
 except SystemExit as e:
     import os
     print('Error SystemExit --> ', e)
     os._exit()
-
-
-# endregion  -----------------------------
-
-#
-# cleanCodes(1, '')  # -- clean by date
-# codesAvailable()
-# print("codes count  --- > ", len(code_list['codes']))
-
-# ---  Check  GSM module sim ------
-if simInserted() == "0":
-    if debugging:
-        print('Modulo GSM no tiene sim')
-    oled1.fill(0)
-    oled1.text("No SIM", 10, 15)
-    oled1.show()
-else:
-    led25 = Pin(25, Pin.OUT)
-    led25.value(0)
-
-    # Initialize timer led blink
-    tim25 = Timer()
-
-    # Initialize and set all the rows to low
-    InitKeypad()
-    #-------  SETUP GSM device  -------------------
-    init_gsm()
-
-    # Initialize timer Used for polling keypad
-    timerKeypad = Timer()
-
-    # Initialize timer used for sim800L
-    timerSim800L = Timer()
-
-    # Activate blink led
-    if debugging:
-        tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
-
-    timerSim800L.init(freq=2, mode=Timer.PERIODIC, callback=simResponse)
-    # _thread.start_new_thread(simResponse, ())
-
-    timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
-
-    # ------ Timestamp section   ---------------------
-    rtc = RTC()
-    rtc_date = RTC().datetime()
-
-    initial()
-    song('initial')
-
 
