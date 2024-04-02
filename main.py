@@ -1097,6 +1097,8 @@ def simResponse(timer):
         elif '+CBC:' in response:
             pos = response.index(':')
             response_return = response[pos + 2: (pos + 2) + 9]
+            d = RTC()
+
 
             if sendStatus:
                 sendStatus = False
@@ -1107,6 +1109,7 @@ def simResponse(timer):
                 gsm_status.append({'OpenByCode': openByCode})
                 gsm_status.append({'cfgCode': _settingsCode})
                 gsm_status.append({'pwdRST': pwdRST})
+                gsm_status.append({'RTC': d.datetime()})
 
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
