@@ -10,6 +10,7 @@ import magnet
 import gate
 import initSetup
 import jsonTools
+import math
 
 #####1 git branch alert_open_event  -----------------
 
@@ -210,7 +211,25 @@ def str_to_bool(s):
     elif s.lower() == 'false':
         return False
 
-# region ----------  show command received ------------------
+# region ----------  show on display ------------------
+    # oled1.text(text,x,y)
+    # 
+
+def DisplayMsg(msg,time):
+    global WIDTH
+    len_char = int(WIDTH / 8)
+    oled1.fill(0)
+    oled1.show()
+    lines = 1
+    if len(msg) > len_char:
+        lines = int(len(msg) / len_char)
+        if (math.fmod(len(msg),len_char) > 0):
+            lines += 1
+        for line in range(0, lines):
+            oled1.text(msg[(line * len_char) : (len_char * (line + 1)) ] ,0 , line * 8 )
+        oled1.show()
+    utime.sleep(time)
+
 def showMsg(msg):
     oled1.fill(0)
     oled1.show()
@@ -227,8 +246,6 @@ def showMsg(msg):
     oled1.show()
     utime.sleep(0.9)
     ShowMainFrame()
-
-# endregion
 
 def showVersion(msg):
     oled1.fill(0)
@@ -278,6 +295,7 @@ def ShowMainFrame():
     oled1.show()
     screen_saver = 0
 
+# endregion
 
 def updTimestamp():
     gsm.write('AT+CCLK?\r')
@@ -759,6 +777,7 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
+                                DisplayMsg('pwd ok',5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -774,6 +793,7 @@ def PollKeypad(timer):
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
                             if debugging:
+                                DisplayMsg('pwd error', 5)
                                 print('pwd error')
                             code = ''
                             break
@@ -832,6 +852,7 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
+                                DisplayMsg('pwd ok', 5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -847,6 +868,7 @@ def PollKeypad(timer):
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
                             if debugging:
+                                DisplayMsg('pwd error',4)
                                 print('pwd error')
                             code = ''
                             break
@@ -896,7 +918,8 @@ def PollKeypad(timer):
                 oled1.show()
                 last_key_press = MATRIX[row][col]
                 if debugging:
-                    print("Codigo:" + code)
+                    DisplayMsg('Codigo: ' + code, 5)
+                    print("Codigo: " + code)
             else:  #Screen saver counter start -----------------------------------
                 if screen_saver <= 2000:
                     screen_saver += 1
@@ -970,7 +993,7 @@ def simResponse(timer):
             global timestamp
             response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
             if debugging:
-                print('sim status --> ' + response)
+                print('sim status: ' + response)
             pos = response.index(':')
             timestamp = response[pos + 3: len(response) - 1]
             if debugging:
