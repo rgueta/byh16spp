@@ -14,20 +14,21 @@ import math
 
 #####1 git branch alert_open_event  -----------------
 
-# region --------  Setup config json file  ------------------
+# region -------- json file config, events, restraint  ------------------
 
 
 conf = open('config.json')
 config = json.loads(conf.read())
 conf.close()
 
-# endregion ----------------
-
-# region --------  Setup Events json file  ------------------
-
 event = open('events.json')
 events_log = json.loads(event.read())
 event.close()
+
+restraint = open('restraint.json')
+restraint_list = json.loads(restraint.read())
+restraint.close()
+
 # endregion ----------------
 
 
@@ -777,7 +778,7 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
-                                DisplayMsg('pwd ok',5)
+                                # DisplayMsg('pwd ok',5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -793,7 +794,8 @@ def PollKeypad(timer):
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
                             if debugging:
-                                DisplayMsg('pwd error', 5)
+                                # disable because not working ok
+                                # DisplayMsg('pwd error', 5)
                                 print('pwd error')
                             code = ''
                             break
@@ -852,7 +854,8 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
-                                DisplayMsg('pwd ok', 5)
+                                # disable because not working ok
+                                # DisplayMsg('pwd ok', 5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -868,7 +871,8 @@ def PollKeypad(timer):
                             oled1.text("Pwd:         ", 1, 22)
                             oled1.show()
                             if debugging:
-                                DisplayMsg('pwd error',4)
+                                # disable because not working ok
+                                # DisplayMsg('pwd error',4)
                                 print('pwd error')
                             code = ''
                             break
@@ -918,7 +922,8 @@ def PollKeypad(timer):
                 oled1.show()
                 last_key_press = MATRIX[row][col]
                 if debugging:
-                    DisplayMsg('Codigo: ' + code, 5)
+                    # disable because not working ok
+                    # DisplayMsg('Codigo: ' + code, 5)
                     print("Codigo: " + code)
             else:  #Screen saver counter start -----------------------------------
                 if screen_saver <= 2000:
