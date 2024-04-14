@@ -124,5 +124,25 @@ def updJson(mov,file,key,value,newValue):
     except FileNotFoundError as exc:  # create file not exists
         print('InsertJson Error --> ', file, ', ', FileNotFoundError)
         pass    
+
+
+########################################################
+# file: json file name to read
+# key:  key to read
+# Desc: Convert Json file to text 
+#######################################################33
+def txtJson(file, key):
+    jsonObj = open(file, "r")
+    json_list = json.loads(jsonObj.read())
+    jsonObj.close()
+    arr = []
+    for i, item in enumerate(json_list[key]):
+        arr.append(item)
+
+    if(len(arr) == 0):
+        arr.append('Restraint empty')
+        
+    return str(arr)
+
 if __name__ == "__main__" :
     print("Running at tools.py")

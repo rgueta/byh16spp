@@ -982,8 +982,11 @@ def simResponse(timer):
 
     if gsm.any() > 0:
         response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
+        header = response.split(',')
+        
         if debugging:
             print(response)
+            
         if 'ERROR' in response:
             print('simResponse,Error detected: ' + response)
         elif '+CREG:' in response:  # Get sim card status
@@ -1018,6 +1021,8 @@ def simResponse(timer):
 
         # SMS----------------------
         elif '+CMT:' in response:
+            senderSim = header[0][header[0].index('"') + 1: -1]
+            senderSim = senderSim[-10]
             response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
             if 'twilio' in response.lower():
                 msg = response.split("-")
@@ -1028,7 +1033,8 @@ def simResponse(timer):
                 msg = response.split(",")
             if debugging:
                 print('GSM response: ' + response)
-
+                print('sender Sim --> ',senderSim)
+                
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
                 msg[3] = msg[3].rstrip('\r\n')
@@ -1045,24 +1051,24 @@ def simResponse(timer):
                 #codesAvailable()
                 #sendCodeToVisitor(msg[1],msg[4])
 
-            elif msg[0].strip() == 'locked':
+            elif msg[0].strip() == 'lock':
                 # if not verifyRestraint(msg[4]):
-                if not jsonTools.updJson('r', 'restraint.json','uuid', msg[3], ''):
-                    api_data = { "name": msg[1], "email": msg[2], "uuid": msg[3],
-                                "house": msg[4].rstrip('\r\n'),
-                                "local": getLocalTimestamp()}
+                if not jsonTools.updJson('r', 'restraint.json','id', msg[4], ''):
+                    api_data = { "name": msg[1], "house": msg[2], "sim": msg[3],
+                                "id": msg[4],
+                                "lockedAt": getLocalTimestamp()}
                     # insertJson(api_data, 'restraint.json')
                     jsonTools.updJson('i', 'restraint.json','user', api_data, '')
-            elif msg[0].strip() == 'unlocked':
-                api_data = {"name": msg[1], "email": msg[2], "uuid": msg[3],
-                            "house": msg[4].rstrip('\r\n'),
-                            "date": getLocalTimestamp()}
+            elif msg[0].strip() == 'unlock':
+                api_data = {"name": msg[1], "house": msg[2], "sim": msg[3],
+                            "id": msg[4],
+                            "lockedAt": getLocalTimestamp()}
                 # unblockUser(msg[3])
-                jsonTools.updJson('d','restraint.json','uuid',msg[3],'')
+                jsonTools.updJson('d','restraint.json','sim',msg[3],'')
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
-                if not UserIsBlocked(msg[2]):
+                if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, ''):
                     if not demo:
                         print('Abriendo', msg)
                         if 'peatonal' in msg[1]:
@@ -1070,10 +1076,15 @@ def simResponse(timer):
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
                 else:
+                    if debugging:
+                        print('User locked')
                     showMsg('User locked')
             elif msg[0] == 'status':
-                sendStatus = True
-                signal_Status('Status')
+                if msg[1] == 'gral':
+                    sendStatus = True
+                    signal_Status('Status')
+                elif msg[1] == 'restraint':
+                    sendSMS(jsonTools.txtJson('restraint.json','user'))
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
             elif msg[0] == 'rst':
@@ -1094,6 +1105,7 @@ def simResponse(timer):
                     
                 if msg[2] == 'openByCode':
                     openByCode = msg[3]
+                
                 if msg[2] == 'debugging':
                     debugging = msg[3]
                     if debugging:
@@ -1127,10 +1139,9 @@ def simResponse(timer):
             response_return = response[pos + 2: (pos + 2) + 9]
             d = RTC()
 
-
             if sendStatus:
                 sendStatus = False
-                gsm_status.append({']Local': getLocalTimestamp()})
+                gsm_status.append({'Local': getLocalTimestamp()})
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
@@ -1173,15 +1184,6 @@ def simResponse(timer):
 
 # endregion ------ Timers  -----------------------------------
 
-def UserIsBlocked(uuid):
-    restraint_list = {}
-    jaccess = open("restraint.json", "r")
-    restraint_list = json.loads(jaccess.read())
-    for i, item in enumerate(restraint_list['user']):
-        if (uuid.strip() == item['uuid']):
-            return True
-    return False
-
 
 def sendSMS(msg):
     for i, item in enumerate(admin_sim):
@@ -1195,19 +1197,6 @@ def sendSMS(msg):
         utime.sleep(1)
         # gsm.write(chr(26))
         # utime.sleep(0.5)
-
-
-    # for i, item in enumerate(admin_sim):
-    #     print('sent sms to ' + item)
-    #     utime.sleep(1)
-    #     gsm.write('AT+CMGS="' + str(item, encoding) + '"\r')
-    #     utime.sleep(1)
-    #     gsm.write(str(msg) + "\r")
-    #
-    #     # gsm.write('\x1A')  # Enable to send SMS
-    #     utime.sleep(1)
-    #     gsm.write(chr(26))
-    #     utime.sleep(0.5)
 
 
 def displayErrors():
@@ -1244,6 +1233,13 @@ def pkgListAccess():
 def simInserted():
     gsm.write('AT+CREG?\r')
     utime.sleep(0.7)
+
+def sendJson(file):
+    jsonObj = open(file, "r")
+    file_list = json.loads(jsonObj.read())
+
+    jsonObj.close()
+
 
 
 # endregion ------  functions --------------------------------------------------
