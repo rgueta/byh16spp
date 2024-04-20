@@ -5,9 +5,10 @@ import json
 # key       -> key to find
 # value     -> value to change
 # newValue  -> new value to change previous value
+# wholeWord -> If Find whole word or part of it, default True [yes find whole word]
 # Desc: Generic Module [crud] for JSON files
 #######################################################33
-def updJson(mov,file,key,value,newValue):
+def updJson(mov,file,key,value,newValue,wholeWord=True):
     global jcodes
     global code_list
     global restraint_list
@@ -79,33 +80,49 @@ def updJson(mov,file,key,value,newValue):
 
                 elif (type(jitem) != 'int' or type(jitem) != 'float' or type(jitem) != 'str') :
                     for l,dict in enumerate(jitem):
-                        if dict == key and jitem[dict] == value:
-                            if newValue == '':
-                                if mov == 'r':   #read
-                                    return True
-                                    break
-                                elif mov == 'd':   # delete
-                                    del file_list[item][j]
-                                    f = open(file,"w")
-                                    json.dump(file_list, f)
-                                    f.close()
-
-                                    break
-                                elif mov == 'i':   # insert
-                                    print('Insert action pending index:', j, ' jitem -> ',file_list[item][j])
-                                    break
-                                elif mov == 'c':   # change
-                                    print('Change action pending index:', j, ' jitem -> ',file_list[item][j])
-                                    break
-                            else:
-                                for m, e in enumerate(file_list[item]):
-                                    if e[key] == value and mov == 'c':
-                                        print('last upd action key, value, newValue -> ', key,', ', value, ', ', newValue);
-                                        file_list[item][m][key] = newValue
+                        if dict == key:
+                            found = False
+                            if len(jitem[dict]) == len(value):
+                                 if jitem[dict] == value:
+                                    found = True
+                            else:        
+                                if wholeWord:
+                                    if jitem[dict] == value:
+                                        found = True
+                                else:
+                                    if len(jitem[dict]) < len(value):
+                                        if value.find(jitem[dict]):
+                                            found = True
+                                    else:
+                                        if jitem[dict].find(value):
+                                            found = True
+                            if found:
+                                if newValue == '':
+                                    if mov == 'r':   #read
+                                        return True
+                                        break
+                                    elif mov == 'd':   # delete
+                                        del file_list[item][j]
                                         f = open(file,"w")
                                         json.dump(file_list, f)
                                         f.close()
+
                                         break
+                                    elif mov == 'i':   # insert
+                                        print('Insert action pending index:', j, ' jitem -> ',file_list[item][j])
+                                        break
+                                    elif mov == 'c':   # change
+                                        print('Change action pending index:', j, ' jitem -> ',file_list[item][j])
+                                        break
+                                else:
+                                    for m, e in enumerate(file_list[item]):
+                                        if e[key] == value and mov == 'c':
+                                            print('last upd action key, value, newValue -> ', key,', ', value, ', ', newValue);
+                                            file_list[item][m][key] = newValue
+                                            f = open(file,"w")
+                                            json.dump(file_list, f)
+                                            f.close()
+                                            break
 
             if file == 'codes.json':
                 jcodes = open('codes.json')

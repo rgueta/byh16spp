@@ -1022,7 +1022,9 @@ def simResponse(timer):
         # SMS----------------------
         elif '+CMT:' in response:
             senderSim = header[0][header[0].index('"') + 1: -1]
-            senderSim = senderSim[-10]
+            if(len(senderSim) >= 10):
+                senderSim = senderSim[-10:]
+
             response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
             if 'twilio' in response.lower():
                 msg = response.split("-")
@@ -1064,11 +1066,11 @@ def simResponse(timer):
                             "id": msg[4],
                             "lockedAt": getLocalTimestamp()}
                 # unblockUser(msg[3])
-                jsonTools.updJson('d','restraint.json','sim',msg[3],'')
+                jsonTools.updJson('d','restraint.json','sim',msg[3],'',False)
                 # ----- Update available codes  -----
                 #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
             elif msg[0].strip() == 'open':
-                if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, ''):
+                if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, '',False):
                     if not demo:
                         print('Abriendo', msg)
                         if 'peatonal' in msg[1]:
@@ -1138,7 +1140,7 @@ def simResponse(timer):
             pos = response.index(':')
             response_return = response[pos + 2: (pos + 2) + 9]
             d = RTC()
-
+ 
             if sendStatus:
                 sendStatus = False
                 gsm_status.append({'Local': getLocalTimestamp()})
