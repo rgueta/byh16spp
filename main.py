@@ -1019,7 +1019,6 @@ def simResponse(timer):
             
     # region Admin commands section -------------------------------------
             
-            # if role == 'admin' or role == 'neighborAdmin': 
             if isAnyAdmin(senderSim):
                 if msg[0].strip() == 'newUser':
                     api_data = { "name": msg[1], "house": msg[2], "sim": msg[3],
@@ -1029,71 +1028,69 @@ def simResponse(timer):
                     return
 
                 elif msg[0].strip() == 'lock':
-                    print('si llegue aqui al evento lock --->')
                     jsonTools.updJson('updStatus', 'restraint.json','sim', msg[3],
                                        'lock', False,'',getLocalTimestamp())
                     return
                 
                 elif msg[0].strip() == 'unlock':
-                    print('si llegue aqui al evento unlock --->')
                     jsonTools.updJson('updStatus','restraint.json','sim',msg[3],
                                       'unlock',False,'',getLocalTimestamp())
                     return
-
-
-            elif msg[0] == 'status':
-                if msg[1] == 'gral':
-                    sendStatus = True
-                    signal_Status('Status')
-
-                elif msg[1] == 'restraint':
-                    sendSMS(jsonTools.txtJson('restraint.json','user'))
-
-                elif msg[1] == 'extrange':
-                    sendSMS(jsonTools.txtJson('extrange.json','events'))
-                return
-
-            elif msg[0] == 'active_codes':
-                sendSMS('codes available --> ' + pkgListCodes())
-                return
-            
-            elif msg[0] == 'rst':
-                softReset()
-                return
-            
-            elif msg[0] == 'cfgCHG':
-                oled1.fill(0)
-                oled1.text(msg[2] + ' =', 2, 1)
-                oled1.text(msg[3], 2, 14)
-                oled1.show()
-                utime.sleep(4)
                 
-                if(msg[3] == 'false' or msg[3] == 'true'):
-                    msg[3] = str_to_bool(msg[3])
-                               
-                jsonTools.updJson('u','config.json',msg[1], msg[2], msg[3])
+                elif msg[0] == 'active_codes':
+                    sendSMS('codes available --> ' + pkgListCodes())
+                    return
+                
+                elif msg[0] == 'rst':
+                    softReset()
+                    return
+
+            if isAdmin(senderSim):
+                if msg[0] == 'status':
+                    if msg[1] == 'gral':
+                        sendStatus = True
+                        signal_Status('Status')
+
+                    elif msg[1] == 'restraint':
+                        sendSMS(jsonTools.txtJson('restraint.json','user'))
+
+                    elif msg[1] == 'extrange':
+                        sendSMS(jsonTools.txtJson('extrange.json','events'))
+                    return
+
+                elif msg[0] == 'cfgCHG':
+                    oled1.fill(0)
+                    oled1.text(msg[2] + ' =', 2, 1)
+                    oled1.text(msg[3], 2, 14)
+                    oled1.show()
+                    utime.sleep(4)
                     
-                if msg[2] == 'openByCode':
-                    openByCode = msg[3]
-                
-                if msg[2] == 'debugging':
-                    debugging = msg[3]
-                    if debugging:
-                        tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
-                    else:
-                        tim25.deinit()
+                    if(msg[3] == 'false' or msg[3] == 'true'):
+                        msg[3] = str_to_bool(msg[3])
+                                
+                    jsonTools.updJson('u','config.json',msg[1], msg[2], msg[3])
+                        
+                    if msg[2] == 'openByCode':
+                        openByCode = msg[3]
+                    
+                    if msg[2] == 'debugging':
+                        debugging = msg[3]
+                        if debugging:
+                            tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
+                        else:
+                            tim25.deinit()
 
-                if msg[1] == 'keypad_matrix':
-                        MATRIX = config[msg[1]][msg[3]]
+                    if msg[1] == 'keypad_matrix':
+                            MATRIX = config[msg[1]][msg[3]]
 
-                if msg[2] == 'settingsCode':
-                    _settingsCode = msg[3]
-                
-                if msg[2] == 'pwdRST':
-                    pwdRST = msg[3]
+                    if msg[2] == 'settingsCode':
+                        _settingsCode = msg[3]
+                    
+                    if msg[2] == 'pwdRST':
+                        pwdRST = msg[3]
 
-                ShowMainFrame()
-                return    
+                    ShowMainFrame()
+                    return    
     #endregion admin  -------------------------------------------------
 
         elif '+CSQ:' in response:
