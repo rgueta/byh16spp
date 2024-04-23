@@ -170,11 +170,11 @@ def changeSetting(value):
 
     # debug -----------------------------------
     elif value == '10':  #debug true
-        jsonTools.updJson('c','config.json','app', 'debugging', True)
+        jsonTools.updJson('u','config.json','app', 'debugging', True)
         applied = True
 
     elif value == '11': #debug false
-        jsonTools.updJson('c','config.json','app', 'debugging', False)
+        jsonTools.updJson('u','config.json','app', 'debugging', False)
         applied = True
 
     return applied
@@ -400,74 +400,6 @@ def InitKeypad():
         for col in range(0, 4):
             row_pins[row].low()
 
-# region  few commented because new tools.py -------------------------------
-
-# def unblockUser(uuid):
-    # global restraint_list
-    # jaccess = open("restraint.json", "r")
-    # restraint_list = json.loads(jaccess.read())
-    # jaccess.close()
-
-    # for i, item in enumerate(restraint_list['user']):
-    #     if item['uuid'] == uuid:
-    #         del restraint_list['user'][i]
-    #         f = open("restraint.json","w")
-    #         json.dump(restraint_list, f)
-    #         f.close()
-    #         break
-
-    # jsonTools.updJson('d','restraint.json','uuid',uuid,'')
-    # jaccess = open("restraint.json", "r")
-    # restraint_list = json.loads(jaccess.read())
-    # jaccess.close()
-
-
-# def verifyRestraint(uuid):
-#     exists = False
-#     jaccess = open('restraint.json')
-#     restraint_list = json.loads(jaccess.read())
-#     jaccess.close()
-#     for i, item in enumerate(restraint_list['user']):
-#         if item['uuid'] == uuid:
-#             print('Ya existe este usuario')
-#             exists = True
-#             break
-#     return exists
-
-# def insertJson(pkg, file):
-#     global jcodes
-#     global code_list
-#     global restraint_list
-#     try:  # if os.path.exists(file):
-#         with open(file, 'r+', encoding='utf8') as jsonFile:
-#             #     # First we load existing data into a dict.
-#             file_data = json.load(jsonFile)
-#             if file == 'codes.json':
-#                 file_data['codes'].append(pkg)
-#             elif file == 'restraint.json':
-#                 file_data['user'].append(pkg)
-#             elif file == 'events.json':
-#                 file_data['events'].append(pkg)
-#         f = open(file, "w")
-#         json.dump(file_data, f)
-#         f.close()
-#         if file == 'codes.json':
-#             jcodes = open('codes.json')
-#             code_list = json.loads(jcodes.read())
-#             jcodes.close()
-#         elif file == 'restraint.json':
-#             jfiles = open('restraint.json')
-#             restraint_list = json.loads(jfiles.read())
-#             jfiles.close()
-
-#     except FileNotFoundError as exc:  # create file not exists
-#         print('InsertJson Error --> ', FileNotFoundError)
-#         pass
-
-
-# endregion   -------------------------------------
-
-
 def tupleDateFROM_ISO(d):  # get just date from ISO datetime format '2022-01-05T10:53:13.00'
     tPosition = d.index('T')
     onlyDate = d[0:tPosition].split('-')
@@ -550,8 +482,7 @@ def verifyCode(cap_code):
                              "CoreSim":config['sim']['value'],"timestamp":
                              rtc.datetime()}
 
-                # insertJson(event_pkg,'events.json')
-                jsonTools.updJson('i','events.json','events',event_pkg,'')
+                jsonTools.updJson('c','events.json','events',event_pkg,'')
                 # gsm.write('AT+CCLK?\r\n')
                 utime.sleep(1)
 
@@ -968,7 +899,8 @@ def simResponse(timer):
     global tupleToday
     global Today
     global gsm_status
-    global sendStatus
+    global sendStatus  # used to collect more information from sim800L
+                       # like CBC, CSQ values
     global openByCode
     global MATRIX
     global cmdLineTitle
@@ -1026,6 +958,31 @@ def simResponse(timer):
                 senderSim = senderSim[-10:]
 
             response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
+
+            role = jsonTools.updJson('r', 'restraint.json','sim', senderSim,'',True,'role')
+            # Check extrange sender----------------------------------
+            if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, '',False):
+                timestamp = getLocalTimestamp()
+                pkg = { "sim" : senderSim, "cmd" : response, "eventAt" : timestamp }
+                jsonTools.updJson('c', 'extrange.json','events', pkg, '')
+
+                #  --- send extrage info to admin  -------
+                sendSMS('Extrange sim: ' + senderSim + ' \n,cmd: ' + response
+                         + '\n, at: ' + timestamp )
+                if debugging:
+                    print('Extrange attempted')
+                    showMsg('Extrange attempted')
+                return
+            
+            # Check if user is lock  -------------------------------------
+            # status = jsonTools.updJson('r', 'restraint.json','sim', senderSim,'',True,'status')
+            # if status == 'lock' or status != 'unlock':
+            if isLocked(senderSim):
+                if debugging:
+                    print('User locked')
+                showMsg('User locked')
+                return
+
             if 'twilio' in response.lower():
                 msg = response.split("-")
                 lenght = len(response)
@@ -1033,6 +990,7 @@ def simResponse(timer):
                 msg = response[index + 2:lenght].split(',')
             else:
                 msg = response.split(",")
+
             if debugging:
                 print('GSM response: ' + response)
                 print('sender Sim --> ',senderSim)
@@ -1044,56 +1002,66 @@ def simResponse(timer):
                 api_data = {"userId": msg[3], "date": msg[2],
                             "code": msg[1], "visitorSim": msg[4],
                             "codeId": msg[5]}
-                # insertJson(api_data, 'codes.json')
-                jsonTools.updJson('i', 'codes.json','codes', api_data, '')
+                jsonTools.updJson('c', 'codes.json','codes', api_data, '')
                 cleanCodes(1, '')
                 ShowMainFrame()
-
-                # ----- Update available codes  -----
-                #codesAvailable()
-                #sendCodeToVisitor(msg[1],msg[4])
-
-            elif msg[0].strip() == 'lock':
-                # if not verifyRestraint(msg[4]):
-                if not jsonTools.updJson('r', 'restraint.json','id', msg[4], ''):
-                    api_data = { "name": msg[1], "house": msg[2], "sim": msg[3],
-                                "id": msg[4],
-                                "lockedAt": getLocalTimestamp()}
-                    # insertJson(api_data, 'restraint.json')
-                    jsonTools.updJson('i', 'restraint.json','user', api_data, '')
-            elif msg[0].strip() == 'unlock':
-                api_data = {"name": msg[1], "house": msg[2], "sim": msg[3],
-                            "id": msg[4],
-                            "lockedAt": getLocalTimestamp()}
-                # unblockUser(msg[3])
-                jsonTools.updJson('d','restraint.json','sim',msg[3],'',False)
-                # ----- Update available codes  -----
-                #   print('Es un acceso --> ' + str(datetime.now()) + ' - ' + response)
+                return
+            
             elif msg[0].strip() == 'open':
-                if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, '',False):
-                    if not demo:
-                        print('Abriendo', msg)
-                        if 'peatonal' in msg[1]:
-                            magnet.Activate()
-                        elif 'vehicular' in msg[1]:
-                            gate.Activate()
-                else:
+                if not demo:
                     if debugging:
-                        print('User locked')
-                    showMsg('User locked')
+                        print('Abriendo', msg)
+                    if 'peatonal' in msg[1]:
+                        magnet.Activate()
+                    elif 'vehicular' in msg[1]:
+                        gate.Activate()
+                return
+            
+    # region Admin commands section -------------------------------------
+            
+            # if role == 'admin' or role == 'neighborAdmin': 
+            if isAnyAdmin(senderSim):
+                if msg[0].strip() == 'newUser':
+                    api_data = { "name": msg[1], "house": msg[2], "sim": msg[3],
+                                    "status": "unlock","id": msg[4],"role": msg[5],
+                                    "lockedAt": getLocalTimestamp()}
+                    jsonTools.updJson('c', 'restraint.json','user', api_data, '')
+                    return
+
+                elif msg[0].strip() == 'lock':
+                    print('si llegue aqui al evento lock --->')
+                    jsonTools.updJson('updStatus', 'restraint.json','sim', msg[3],
+                                       'lock', False,'',getLocalTimestamp())
+                    return
+                
+                elif msg[0].strip() == 'unlock':
+                    print('si llegue aqui al evento unlock --->')
+                    jsonTools.updJson('updStatus','restraint.json','sim',msg[3],
+                                      'unlock',False,'',getLocalTimestamp())
+                    return
+
+
             elif msg[0] == 'status':
                 if msg[1] == 'gral':
                     sendStatus = True
                     signal_Status('Status')
+
                 elif msg[1] == 'restraint':
                     sendSMS(jsonTools.txtJson('restraint.json','user'))
+
+                elif msg[1] == 'extrange':
+                    sendSMS(jsonTools.txtJson('extrange.json','events'))
+                return
+
             elif msg[0] == 'active_codes':
                 sendSMS('codes available --> ' + pkgListCodes())
+                return
+            
             elif msg[0] == 'rst':
                 softReset()
-
+                return
+            
             elif msg[0] == 'cfgCHG':
-
                 oled1.fill(0)
                 oled1.text(msg[2] + ' =', 2, 1)
                 oled1.text(msg[3], 2, 14)
@@ -1103,7 +1071,7 @@ def simResponse(timer):
                 if(msg[3] == 'false' or msg[3] == 'true'):
                     msg[3] = str_to_bool(msg[3])
                                
-                jsonTools.updJson('c','config.json',msg[1], msg[2], msg[3])
+                jsonTools.updJson('u','config.json',msg[1], msg[2], msg[3])
                     
                 if msg[2] == 'openByCode':
                     openByCode = msg[3]
@@ -1125,7 +1093,9 @@ def simResponse(timer):
                     pwdRST = msg[3]
 
                 ShowMainFrame()
-                
+                return    
+    #endregion admin  -------------------------------------------------
+
         elif '+CSQ:' in response:
             pos = response.index(':')
             # global response_return
@@ -1189,7 +1159,8 @@ def simResponse(timer):
 
 def sendSMS(msg):
     for i, item in enumerate(admin_sim):
-        print('sent sms to ' + item)
+        if debugging:
+            print('sent msg to ' + item)
         utime.sleep(1)
         gsm.write('AT+CMGS="' + item + '"\r\n')
         utime.sleep(1)
@@ -1197,8 +1168,7 @@ def sendSMS(msg):
 
         gsm.write('\x1A')  # Enable to send SMS
         utime.sleep(1)
-        # gsm.write(chr(26))
-        # utime.sleep(0.5)
+
 
 
 def displayErrors():
@@ -1228,8 +1198,57 @@ def pkgListAccess():
     global access
     access = ''
     for i, item in enumerate(restraint_list['user']):
-        access = access + item['name'] + '-[' + item['house'] + '],'
+        if item['status'] == 'lock':
+            access = access + item['name'] + '-[' + item['house'] + '],'
     return access
+
+def isLocked(sim):
+    locked = True
+    for i, item in enumerate(restraint_list['user']):
+        if item['sim'] == sim:
+            if item['status'] == 'unlock':
+                locked = False
+                break
+    return locked
+
+def isAnyAdmin(sim):
+    admin = False
+    for i, item in enumerate(restraint_list['user']):
+        if len(item['sim']) == len(sim):
+            if item['sim'] == sim:
+                if item['role'] in ['admin','neighborAdmin']:
+                    admin = True
+                    break
+        else:
+            if len(item['sim']) < len(sim):
+                if sim.find(item['sim']):
+                    if item['role'] in ['admin','neighborAdmin']:
+                        admin = True
+            else:
+                if item['sim'].find(sim):
+                    if item['role'] in ['admin','neighborAdmin']:
+                        admin = True    
+    return admin
+
+
+def isAdmin(sim):
+    admin = False
+    for i, item in enumerate(restraint_list['user']):
+        if len(item['sim']) == len(sim):
+            if item['sim'] == sim:
+                if item['role'] == 'admin':
+                    admin = True
+                    break
+        else:
+            if len(item['sim']) < len(sim):
+                if sim.find(item['sim']):
+                    if item['role'] == 'admin':
+                        admin = True
+            else:
+                if item['sim'].find(sim):
+                    if item['role'] == 'admin':
+                        admin = True    
+    return admin
 
 # --- Verify if sim card is inserted ---
 def simInserted():
@@ -1270,6 +1289,7 @@ try:
     try:
         jaccess = open('restraint.json')
         restraint_list = json.loads(jaccess.read())
+        jaccess.close()
 
     except OSError:  # Open failed
         print('Error--> ', OSError)
