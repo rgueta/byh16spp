@@ -103,12 +103,13 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
                                             found = True
                             if found:
                                 if mov == 'updStatus':
-                                    file_list[item][j]['status'] = newValue
-                                    file_list[item][j]['updatedAt'] = timestamp
-                                    wfile = open(file,'w')
-                                    json.dump(file_list, wfile)
-                                    wfile.close()
-                                    break
+                                    if file_list[item][j]['sim'] == value:
+                                        file_list[item][j]['status'] = newValue
+                                        file_list[item][j]['updatedAt'] = timestamp
+                                        wfile = open(file,'w')
+                                        json.dump(file_list, wfile)
+                                        wfile.close()
+                                        break
 
                                 if mov == 'updSim':
                                     file_list[item][j]['sim'] = newValue
@@ -162,7 +163,7 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
                     jcodes.close()
                     return
                 elif file == 'restraint.json':
-                    jfiles = open('restraint.json')
+                    jfiles = open('restraint.json', 'r')
                     restraint_list = json.loads(jfiles.read())
                     jfiles.close()
                     return

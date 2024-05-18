@@ -1036,11 +1036,13 @@ def simResponse(timer):
                 elif msg[0].strip() == 'lock':
                     jsonTools.updJson('updStatus', 'restraint.json','sim', msg[3],
                                        'lock', False,'',getLocalTimestamp())
+                    updRestraintList()
                     return
                 
                 elif msg[0].strip() == 'unlock':
                     jsonTools.updJson('updStatus','restraint.json','sim',msg[3],
                                       'unlock',False,'',getLocalTimestamp())
+                    updRestraintList()
                     return
                 
                 elif msg[0] == 'active_codes':
@@ -1160,7 +1162,7 @@ def simResponse(timer):
     # except NameError:
     #     print('Error -->', NameError)
     #     pass
-    if not debugging:
+    if not debugging: 
         led25.value(0)
 
 # endregion ------ Timers  -----------------------------------
@@ -1207,7 +1209,6 @@ def pkgListAccess():
     global access
     access = ''
     for i, item in enumerate(restraint_list['user']):
-        
         if item['status'] == 'lock':
             print('pkgListCodes lock: ' + item['name'])
             access = access + item['name'] + '-[' + item['house'] + '],'
@@ -1216,7 +1217,7 @@ def pkgListAccess():
 def isLocked(sim):
     locked = True
     for i, item in enumerate(restraint_list['user']):
-        print('list sim: ' + item['sim'] + ', sender sim: ' + sim)
+        
         if len(item['sim']) == len(sim):
             if item['sim'] == sim:
                 if item['status'] == 'unlock':
@@ -1224,16 +1225,15 @@ def isLocked(sim):
                     break
         else:
             if len(item['sim']) < len(sim):
-                if sim.find(item['sim']):
+                if item['sim'] in sim:
                     if item['status'] == 'unlock':
                         locked = False
                         break
             else:
-                if item['sim'].find(sim):
+                if sim in item['sim']:
                     if item['status'] == 'unlock':
                         locked = False
                         break
-        
     return locked
 
 def isAnyAdmin(sim):
@@ -1286,7 +1286,11 @@ def sendJson(file):
 
     jsonObj.close()
 
-
+def updRestraintList():
+    global restraint_list
+    jaccess = open('restraint.json')
+    restraint_list = json.loads(jaccess.read())
+    jaccess.close()
 
 # endregion ------  functions --------------------------------------------------
 
@@ -1312,9 +1316,10 @@ try:
         print('Error--> ', OSError)
 
     try:
-        jaccess = open('restraint.json')
-        restraint_list = json.loads(jaccess.read())
-        jaccess.close()
+        updRestraintList()
+        # jaccess = open('restraint.json')
+        # restraint_list = json.loads(jaccess.read())
+        # jaccess.close()
 
     except OSError:  # Open failed
         print('Error--> ', OSError)
