@@ -1,1 +1,34 @@
-{"user": [{"id": "60c53a453371034c5ac6637c", "status": "unlock", "name": "Ricardo Gueta", "sim": "6641752182", "role": "admin", "house": "14", "lockedAt": "24-04-22T15:08:49"}]}
+{
+    "user": [
+        {
+            "id": "60c53a453371034c5ac6637c",
+            "house": "14",
+            "name": "Ricardo Gueta",
+            "sim": "526641752182",
+            "role": "admin",
+            "status": "unlock",
+            "lockedAt": "24-04-23T18:22:19",
+            "updatedAt": "24-05-16T08:36:36"
+        },
+        {
+            "id": "60c53a563371034c5ac6637d",
+            "house": "14",
+            "name": "Ricardo Jimenez",
+            "sim": "526632032532",
+            "role": "neighbor",
+            "status": "unlock",
+            "lockedAt": "24-04-23T18:22:19",
+            "updatedAt": "24-05-16T08:36:36"
+        },
+        {
+            "id": "6646220a41cd4010c286eb4e",
+            "status": "lock",
+            "name": "Veronica Esteves",
+            "lockedAt": "24-05-16T07:45:22",
+            "house": "14",
+            "sim": "+526643312775",
+            "role": "neighbor",
+            "updatedAt": "24-05-16T08:36:36"
+        }
+    ]
+}

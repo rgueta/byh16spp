@@ -957,7 +957,8 @@ def simResponse(timer):
             if(len(senderSim) >= 10):
                 senderSim = senderSim[-10:]
 
-            response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
+            # Line to get SMS text
+            response = str(gsm.readline(), encoding).rstrip('\r\n')
 
             role = jsonTools.updJson('r', 'restraint.json','sim', senderSim,'',True,'role')
             # Check extrange sender----------------------------------
@@ -1017,7 +1018,7 @@ def simResponse(timer):
                         gate.Activate()
                 return
             
-    # region Admin commands section -------------------------------------
+        # region admin or neighborAdmin commands section -------------------------------------
             
             if isAnyAdmin(senderSim):
                 if msg[0].strip() == 'newUser':
@@ -1025,6 +1026,11 @@ def simResponse(timer):
                                     "status": "unlock","id": msg[4],"role": msg[5],
                                     "lockedAt": getLocalTimestamp()}
                     jsonTools.updJson('c', 'restraint.json','user', api_data, '')
+                    return
+                
+                elif msg[0].strip() == 'updSim':
+                    jsonTools.updJson('updSim', 'restraint.json','sim', msg[1],
+                                       msg[2], False,'',getLocalTimestamp())
                     return
 
                 elif msg[0].strip() == 'lock':
@@ -1041,10 +1047,11 @@ def simResponse(timer):
                     sendSMS('codes available --> ' + pkgListCodes())
                     return
                 
-                elif msg[0] == 'rst':
-                    softReset()
-                    return
+                
+                
+        #endregion admin  -------------------------------------------------
 
+        #region super admin ------------------------------------------
             if isAdmin(senderSim):
                 if msg[0] == 'status':
                     if msg[1] == 'gral':
@@ -1056,6 +1063,10 @@ def simResponse(timer):
 
                     elif msg[1] == 'extrange':
                         sendSMS(jsonTools.txtJson('extrange.json','events'))
+                    return
+
+                elif msg[0] == 'rst':
+                    softReset()
                     return
 
                 elif msg[0] == 'cfgCHG':
@@ -1091,7 +1102,8 @@ def simResponse(timer):
 
                     ShowMainFrame()
                     return    
-    #endregion admin  -------------------------------------------------
+        #endregion super andmin--------------------
+    
 
         elif '+CSQ:' in response:
             pos = response.index(':')
@@ -1195,17 +1207,33 @@ def pkgListAccess():
     global access
     access = ''
     for i, item in enumerate(restraint_list['user']):
+        
         if item['status'] == 'lock':
+            print('pkgListCodes lock: ' + item['name'])
             access = access + item['name'] + '-[' + item['house'] + '],'
     return access
 
 def isLocked(sim):
     locked = True
     for i, item in enumerate(restraint_list['user']):
-        if item['sim'] == sim:
-            if item['status'] == 'unlock':
-                locked = False
-                break
+        print('list sim: ' + item['sim'] + ', sender sim: ' + sim)
+        if len(item['sim']) == len(sim):
+            if item['sim'] == sim:
+                if item['status'] == 'unlock':
+                    locked = False
+                    break
+        else:
+            if len(item['sim']) < len(sim):
+                if sim.find(item['sim']):
+                    if item['status'] == 'unlock':
+                        locked = False
+                        break
+            else:
+                if item['sim'].find(sim):
+                    if item['status'] == 'unlock':
+                        locked = False
+                        break
+        
     return locked
 
 def isAnyAdmin(sim):

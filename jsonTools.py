@@ -103,12 +103,16 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
                                             found = True
                             if found:
                                 if mov == 'updStatus':
-                                    print('updStatus found newValue --> ', newValue)
-                                    print('updStatus found file_list[item] -->\n', file_list[item])
-                                    print('updStatus found file_list[item][j] --> ', file_list[item][j])
-
                                     file_list[item][j]['status'] = newValue
-                                    file_list[item][j]['lockedAt'] = timestamp
+                                    file_list[item][j]['updatedAt'] = timestamp
+                                    wfile = open(file,'w')
+                                    json.dump(file_list, wfile)
+                                    wfile.close()
+                                    break
+
+                                if mov == 'updSim':
+                                    file_list[item][j]['sim'] = newValue
+                                    file_list[item][j]['updatedAt'] = timestamp
                                     wfile = open(file,'w')
                                     json.dump(file_list, wfile)
                                     wfile.close()
