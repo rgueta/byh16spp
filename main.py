@@ -78,6 +78,7 @@ gsm = UART(0, gsm_baud, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
 # Setup codes json file
 code_list = {}
 
+
 # region   -----Time Zone  --------------------
 timeZone = config['app']['timeZone']
 datatimeFormat = config['app']['dateTimeFormat']
@@ -309,7 +310,7 @@ def initial():
     global sendStatus
     gsm.write('AT+CCLK?\r')
     # cleanup expired codes
-    utime.sleep(5)
+    utime.sleep(6)
 
     cleanCodes(1, '')
     utime.sleep(2)
@@ -981,7 +982,7 @@ def simResponse(timer):
             if isLocked(senderSim):
                 if debugging:
                     print('User locked')
-                showMsg('User locked')
+                    showMsg('User locked')
                 return
 
             if 'twilio' in response.lower():
@@ -1045,11 +1046,20 @@ def simResponse(timer):
                     updRestraintList()
                     return
                 
+                elif msg[0].strip() == 'delete':
+                    jsonTools.updJson('delete','restraint.json','id',msg[1],
+                                      '',False,'',getLocalTimestamp())
+                    updRestraintList()
+                    return
+                
                 elif msg[0] == 'active_codes':
                     sendSMS('codes available --> ' + pkgListCodes())
                     return
                 
-                
+            else:
+                if debugging:
+                    print('no privileges', msg)
+            
                 
         #endregion admin  -------------------------------------------------
 
@@ -1061,10 +1071,10 @@ def simResponse(timer):
                         signal_Status('Status')
 
                     elif msg[1] == 'restraint':
-                        sendSMS(jsonTools.txtJson('restraint.json','user'))
+                        txtJson('restraint.json','user')
 
                     elif msg[1] == 'extrange':
-                        sendSMS(jsonTools.txtJson('extrange.json','events'))
+                        txtJson('extrange.json','events')
                     return
 
                 elif msg[0] == 'rst':
@@ -1168,13 +1178,15 @@ def simResponse(timer):
 # endregion ------ Timers  -----------------------------------
 
 
-def sendSMS(msg):
+def sendSMS(msg,time=1):
+    global admin_sim
     for i, item in enumerate(admin_sim):
         if debugging:
-            print('sent msg to ' + item)
+            print('sent msg to: ' + item)
         utime.sleep(1)
         gsm.write('AT+CMGS="' + item + '"\r\n')
-        utime.sleep(1)
+        # gsm.write('AT+CMGS="6641752182"\r\n')
+        utime.sleep(time)
         gsm.write(str(msg) + "\r\n")
 
         gsm.write('\x1A')  # Enable to send SMS
@@ -1217,7 +1229,6 @@ def pkgListAccess():
 def isLocked(sim):
     locked = True
     for i, item in enumerate(restraint_list['user']):
-        
         if len(item['sim']) == len(sim):
             if item['sim'] == sim:
                 if item['status'] == 'unlock':
@@ -1246,13 +1257,15 @@ def isAnyAdmin(sim):
                     break
         else:
             if len(item['sim']) < len(sim):
-                if sim.find(item['sim']):
+                if item['sim'] in sim:
                     if item['role'] in ['admin','neighborAdmin']:
                         admin = True
+                        break
             else:
-                if item['sim'].find(sim):
+                if sim in item['sim']:
                     if item['role'] in ['admin','neighborAdmin']:
-                        admin = True    
+                        admin = True
+                        break    
     return admin
 
 
@@ -1266,11 +1279,11 @@ def isAdmin(sim):
                     break
         else:
             if len(item['sim']) < len(sim):
-                if sim.find(item['sim']):
+                if item['sim'] in sim:
                     if item['role'] == 'admin':
                         admin = True
             else:
-                if item['sim'].find(sim):
+                if sim in item['sim']:
                     if item['role'] == 'admin':
                         admin = True    
     return admin
@@ -1292,6 +1305,61 @@ def updRestraintList():
     restraint_list = json.loads(jaccess.read())
     jaccess.close()
 
+########################################################
+# file: json file name to read
+# key:  key to read
+# Desc: Convert Json file to text 
+#######################################################33
+def txtJson(file, key):
+    jsonObj = open(file, "r")
+    json_list = json.loads(jsonObj.read())
+    jsonObj.close()
+   
+    arr = []
+    for i, item in enumerate(json_list[key]):
+        # arr.append({'name':item['name'],'house':item['house'],'status':item['status']})
+        arr.append(item)
+
+    if(len(arr) == 0):
+        arr.append(file + ' empty')
+    else:
+        # sorting
+        for i,iitem in enumerate(arr):
+            for j,jitem in enumerate(arr):
+                if len(arr) > j + 1 :
+                    if arr[j]['house'] > arr[j + 1]['house']:
+                        temp = arr[j]
+                        arr[j] = arr[j + 1]
+                        arr[j + 1] = temp
+
+        arr_send = []
+        pkg_size = 0
+        total_size = 0
+        for i,iitem in enumerate(arr):
+            arr_send.append(iitem)
+            pkg_size += len(str(iitem))
+            total_size += pkg_size
+            if (1024 - pkg_size) <= 220:
+                print('middle pkg size: ' + str(pkg_size))
+                print('send middle pkg: ', arr_send)
+                print('\n')
+                sendSMS(arr_send, 20)
+                utime.sleep(10)
+                pkg_size = 0
+                arr_send.clear()
+      
+
+        if len(arr_send) > 0 :
+            print('\n')
+            print('last pkg size: ' + str(pkg_size))
+            print('last pkg to send: ',arr_send)
+            sendSMS(arr_send, 20)
+            utime.sleep(10)
+
+        print('\n')
+        print('final size: ' + str(total_size))
+
+
 # endregion ------  functions --------------------------------------------------
 
 
@@ -1311,15 +1379,13 @@ try:
     try:
         jcodes = open('codes.json')
         code_list = json.loads(jcodes.read())
+        jcodes.close()
 
     except OSError:  # Open failed
         print('Error--> ', OSError)
 
     try:
         updRestraintList()
-        # jaccess = open('restraint.json')
-        # restraint_list = json.loads(jaccess.read())
-        # jaccess.close()
 
     except OSError:  # Open failed
         print('Error--> ', OSError)

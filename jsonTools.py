@@ -1,5 +1,6 @@
 import json
 timestamp = ''
+
 ########################################################
 # mov       -> movement c:crate, r:read, u:update, d:delete, updLock: lock user, updUnlock:unlock user
 # file      -> json file name to update
@@ -96,10 +97,10 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
                                         found = True
                                 else:
                                     if len(jitem[dict]) < len(value):
-                                        if value.find(jitem[dict]):
+                                        if jitem[dict] in value:
                                             found = True
                                     else:
-                                        if jitem[dict].find(value):
+                                        if value in jitem[dict]:
                                             found = True
                             if found:
                                 if mov == 'updStatus':
@@ -112,12 +113,21 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
                                         break
 
                                 if mov == 'updSim':
-                                    file_list[item][j]['sim'] = newValue
-                                    file_list[item][j]['updatedAt'] = timestamp
-                                    wfile = open(file,'w')
-                                    json.dump(file_list, wfile)
-                                    wfile.close()
-                                    break
+                                     if file_list[item][j]['sim'] == value:
+                                        file_list[item][j]['sim'] = newValue
+                                        file_list[item][j]['updatedAt'] = timestamp
+                                        wfile = open(file,'w')
+                                        json.dump(file_list, wfile)
+                                        wfile.close()
+                                        break
+                                
+                                if mov == 'delete':
+                                     if file_list[item][j]['id'] == value:
+                                        del file_list[item][j]
+                                        wfile = open(file,'w')
+                                        json.dump(file_list, wfile)
+                                        wfile.close()
+                                        break
 
                                 if newValue == '': # not require change value
                                     if mov == 'r':   #read
@@ -177,25 +187,6 @@ def updJson(mov, file, key, value, newValue = '', wholeWord = True, returnKey = 
     except (TypeError) as err:  # create file not exists
         print('InsertJson Error --> ', file, ', ', err)
         pass    
-
-
-########################################################
-# file: json file name to read
-# key:  key to read
-# Desc: Convert Json file to text 
-#######################################################33
-def txtJson(file, key):
-    jsonObj = open(file, "r")
-    json_list = json.loads(jsonObj.read())
-    jsonObj.close()
-    arr = []
-    for i, item in enumerate(json_list[key]):
-        arr.append(item)
-
-    if(len(arr) == 0):
-        arr.append(file + ' empty')
-        
-    return str(arr)
 
 
 def getLocalTimestamp():
