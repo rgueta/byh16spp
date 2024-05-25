@@ -20,7 +20,7 @@ conf = open('config.json')
 config = json.loads(conf.read())
 conf.close()
 
-rotate_display = config['app']['rotate_display']
+rotate_display = config['app']['rotate']
 if rotate_display:
     from ssd1306_rotate import SSD1306_I2C
     print('rotate display------------------')
@@ -108,13 +108,14 @@ HEIGHT = config['screen']['height']
 i2c1 = I2C(1, scl=Pin(scl1), sda=Pin(sda1), freq=400000)
 
 oled1 = SSD1306_I2C(WIDTH, HEIGHT, i2c1)
-# oled1.rotate(2)
+if rotate_display:
+    oled1.rotate(2)
 
 # endregion -------------------------------------------------------
 
 # region ------------- Key pad gpio setup  ----------------------------
-KEY_UP = const(0)
-KEY_DOWN = const(1)
+KEY_UP = const(0) # type: ignore
+KEY_DOWN = const(1) # type: ignore
 
 MATRIX = config['keypad_matrix'][config['keypad_matrix']['default']]
 ROWS = config['pi_pins']['keypad_rows']
@@ -917,6 +918,9 @@ def simResponse(timer):
     global _settingsCode
     global pwdRST
     global demo
+    global oled1
+    global i2c1
+    global rotate_display
 
     msg = ''
     # try:
@@ -1104,6 +1108,15 @@ def simResponse(timer):
                         
                     if msg[2] == 'openByCode':
                         openByCode = msg[3]
+
+                    if msg[2] == 'demo':
+                        demo = msg[3]
+
+                    if msg[2] == 'rotate':
+                        rotate_display = msg[3]
+                        i2c1 = I2C(1, scl=Pin(scl1), sda=Pin(sda1), freq=400000)
+                        oled1 = SSD1306_I2C(WIDTH, HEIGHT, i2c1)
+                        oled1.rotate(2)
                     
                     if msg[2] == 'debugging':
                         debugging = msg[3]
@@ -1148,6 +1161,7 @@ def simResponse(timer):
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
                 gsm_status.append({'Demo': demo})
+                gsm_status.append({'Rotate': rotate_display})
                 gsm_status.append({'OpenByCode': openByCode})
                 gsm_status.append({'cfgCode': _settingsCode})
                 gsm_status.append({'pwdRST': pwdRST})
