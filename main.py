@@ -1,7 +1,7 @@
 # from micropython import const
 from micropython import * # type: ignore
 from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # type: ignore
-from ssd1306 import SSD1306_I2C
+
 # from umqtt.simple import MQTTClient
 import json
 import utime # type: ignore
@@ -19,6 +19,14 @@ import math
 conf = open('config.json')
 config = json.loads(conf.read())
 conf.close()
+
+rotate_display = config['app']['rotate_display']
+if rotate_display:
+    from ssd1306_rotate import SSD1306_I2C
+    print('rotate display------------------')
+else:
+    from ssd1306_non_rotate import SSD1306_I2C
+    print('non rotate display------------------')
 
 event = open('events.json')
 events_log = json.loads(event.read())
@@ -908,6 +916,7 @@ def simResponse(timer):
     global settingsCode
     global _settingsCode
     global pwdRST
+    global demo
 
     msg = ''
     # try:
@@ -1009,13 +1018,13 @@ def simResponse(timer):
                 return
             
             elif msg[0].strip() == 'open':
-                if not demo:
-                    if debugging:
-                        print('Abriendo', msg)
-                    if 'peatonal' in msg[1]:
-                        magnet.Activate()
-                    elif 'vehicular' in msg[1]:
-                        gate.Activate()
+                # if not demo:
+                if debugging:
+                    print('Abriendo', msg)
+                if 'peatonal' in msg[1]:
+                    magnet.Activate()
+                elif 'vehicular' in msg[1]:
+                    gate.Activate()
                 return
             
         # region admin or neighborAdmin commands section -------------------------------------
@@ -1138,6 +1147,7 @@ def simResponse(timer):
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
+                gsm_status.append({'Demo': demo})
                 gsm_status.append({'OpenByCode': openByCode})
                 gsm_status.append({'cfgCode': _settingsCode})
                 gsm_status.append({'pwdRST': pwdRST})

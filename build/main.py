@@ -3,7 +3,7 @@ from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM
 import os
 import uasyncio
 import _thread
-from ssd1306 import SSD1306_I2C
+from ssd1306_non_rotate import SSD1306_I2C
 import json
 import utime
 import magnet

@@ -1,5 +1,5 @@
 # MicroPython SSD1306 OLED driver using I2C interface
-#
+# Non ROTATE
 # library taken from repository at:
 # https://github.com/micropython/micropython/blob/master/drivers/display/ssd1306.py
 #

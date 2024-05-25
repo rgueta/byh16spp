@@ -1,6 +1,6 @@
 from machine import UART, Pin, Timer, I2C
 import utime
-from ssd1306 import SSD1306_I2C
+from ssd1306_non_rotate import SSD1306_I2C
 
 
 # --Primarity test using 6k+-1 optimization.

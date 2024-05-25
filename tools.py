@@ -1,6 +1,6 @@
-from machine import UART, Pin, Timer, I2C
-import utime
-from ssd1306 import SSD1306_I2C
+from machine import UART, Pin, Timer, I2C # type: ignore
+import utime # type: ignore
+from ssd1306_non_rotate import SSD1306_I2C
 
 
 # --Primarity test using 6k+-1 optimization.
@@ -18,21 +18,21 @@ def is_prime(n: int) -> bool:
 
 
 def write_i2c(mess):
-    i2c = machine.I2C(0, scl=machine.Pin(27), sda=machine.Pin(26), freq=400000)
-    while rdy.value() == 0:
+    i2c = machine.I2C(0, scl=machine.Pin(27), sda=machine.Pin(26), freq=400000) # type: ignore
+    while rdy.value() == 0: # type: ignore
         pass
     return i2c.mem_write(mess, 0x74, 0x11)
 
 
 def read_i2c():
-    i2c = machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20), freq=400000)
-    while rdy.value() == 0:
+    i2c = machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20), freq=400000) # type: ignore
+    while rdy.value() == 0: # type: ignore
         pass
     return i2c.mem_read(36, 0x74, 0x01)
 
 
 def Check_i2c():
-    i2c = machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20), freq=400000)
+    i2c = machine.I2C(0, scl=machine.Pin(21), sda=machine.Pin(20), freq=400000) # type: ignore
     utime.sleep(0.2)
     devices = i2c.scan()
 

@@ -16,10 +16,11 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : false,
+		"demo" : true,
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
-		"settingsCode" : "1324" 
+		"settingsCode" : "1324",
+		"rotate_display":false
 		},
 	"sim":{
 		"value":"+526641942241",
