@@ -1,11 +1,10 @@
 # from micropython import const
-from micropython import *
-from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset
-import _thread
+from micropython import * # type: ignore
+from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # type: ignore
 from ssd1306 import SSD1306_I2C
 # from umqtt.simple import MQTTClient
 import json
-import utime
+import utime # type: ignore
 import magnet
 import gate
 import initSetup
@@ -33,10 +32,7 @@ restraint.close()
 
 
 # region ------     Variables     ------------------
-# wait until gsm device connect to network
 
-utime.sleep(14)
-# -------------------------------------
 demo = config['app']['demo']
 debugging = config['app']['debugging']
 Exceptions = ''
@@ -65,6 +61,9 @@ screen_saver = 0
 buzzer = PWM(Pin(buzzer_pin))
 if debugging:
     print('Version ' + version_app)
+
+# wait until gsm device connect to network
+utime.sleep(14)
 initSetup.Initial()
 
 # ------------------ Setup GSM -----------------------
@@ -1072,6 +1071,7 @@ def simResponse(timer):
 
                     elif msg[1] == 'restraint':
                         txtJson('restraint.json','user')
+                        # sendSMS('Hello','w',1,1)
 
                     elif msg[1] == 'extrange':
                         txtJson('extrange.json','events')
@@ -1178,19 +1178,44 @@ def simResponse(timer):
 # endregion ------ Timers  -----------------------------------
 
 
-def sendSMS(msg,time=1):
+#----------------------------------------------
+# msg: message to send
+# type: to send Normal or write to memory to send later
+#      n: Normal, w: Write to memory
+# time: time to wait for assign message 
+#---------------------------------------------
+
+
+def sendSMS(msg, type = 'n', time = 1, trigger = 0):
     global admin_sim
     for i, item in enumerate(admin_sim):
         if debugging:
             print('sent msg to: ' + item)
         utime.sleep(1)
-        gsm.write('AT+CMGS="' + item + '"\r\n')
-        # gsm.write('AT+CMGS="6641752182"\r\n')
-        utime.sleep(time)
-        gsm.write(str(msg) + "\r\n")
+        if type == 'n':
+            # gsm.write('AT+CMGS="' + item + '"\r\n')
+            # utime.sleep(time)
+            # gsm.write(str(msg) + "\r\n")
+            # gsm.write('\x1A')  # Enable to send SMS
+            # utime.sleep(1)
 
-        gsm.write('\x1A')  # Enable to send SMS
-        utime.sleep(1)
+
+            gsm.write('AT+CMGS="' + item + '"\r')
+            utime.sleep(time)
+            gsm.write(str(msg) + "\r\x1A")  # '\x1A' Enable to send SMS
+            # gsm.write('\x1A')  # Enable to send SMS
+            utime.sleep(1)
+
+        else: # write to memory
+            gsm.write('AT+CMGW="' + item +  '"\r')
+            utime.sleep(time)
+            gsm.write(str(msg) + "\r\x1A")
+            utime.sleep(time)
+            # if trigger == 1:
+            #     utime.sleep(time)
+            #     gsm.write('AT+CMSS=3"' + item + '"\r')
+            #     utime.sleep(time)
+
 
 
 
@@ -1305,11 +1330,11 @@ def updRestraintList():
     restraint_list = json.loads(jaccess.read())
     jaccess.close()
 
-########################################################
+#---------------------------------------------
 # file: json file name to read
 # key:  key to read
 # Desc: Convert Json file to text 
-#######################################################33
+#--------------------------------------------
 def txtJson(file, key):
     jsonObj = open(file, "r")
     json_list = json.loads(jsonObj.read())
@@ -1317,20 +1342,20 @@ def txtJson(file, key):
    
     arr = []
     for i, item in enumerate(json_list[key]):
-        # arr.append({'name':item['name'],'house':item['house'],'status':item['status']})
-        arr.append(item)
+        arr.append({item['name'],item['house'],item['status']})
+        # arr.append(item)
 
     if(len(arr) == 0):
         arr.append(file + ' empty')
     else:
         # sorting
-        for i,iitem in enumerate(arr):
-            for j,jitem in enumerate(arr):
-                if len(arr) > j + 1 :
-                    if arr[j]['house'] > arr[j + 1]['house']:
-                        temp = arr[j]
-                        arr[j] = arr[j + 1]
-                        arr[j + 1] = temp
+        # for i,iitem in enumerate(arr):
+        #     for j,jitem in enumerate(arr):
+        #         if len(arr) > j + 1 :
+        #             if arr[j]['house'] > arr[j + 1]['house']:
+        #                 temp = arr[j]
+        #                 arr[j] = arr[j + 1]
+        #                 arr[j + 1] = temp
 
         arr_send = []
         pkg_size = 0
@@ -1338,26 +1363,27 @@ def txtJson(file, key):
         for i,iitem in enumerate(arr):
             arr_send.append(iitem)
             pkg_size += len(str(iitem))
-            total_size += pkg_size
-            if (1024 - pkg_size) <= 220:
+
+            if (1024 - pkg_size) <= 52:
                 print('middle pkg size: ' + str(pkg_size))
                 print('send middle pkg: ', arr_send)
                 print('\n')
-                sendSMS(arr_send, 20)
+                total_size += pkg_size
+                sendSMS(arr_send, 'n')
                 utime.sleep(10)
                 pkg_size = 0
                 arr_send.clear()
       
 
-        if len(arr_send) > 0 :
+        if len(str(arr_send)) > 0 :
+            total_size += pkg_size
             print('\n')
             print('last pkg size: ' + str(pkg_size))
             print('last pkg to send: ',arr_send)
-            sendSMS(arr_send, 20)
+            print('final size: ' + str(total_size))
+            sendSMS(arr_send, 'n')
             utime.sleep(10)
 
-        print('\n')
-        print('final size: ' + str(total_size))
 
 
 # endregion ------  functions --------------------------------------------------
