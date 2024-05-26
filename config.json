@@ -20,7 +20,7 @@
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
 		"settingsCode" : "1324",
-		"rotate":false
+		"rotate":true
 		},
 	"sim":{
 		"value":"+526641942241",
