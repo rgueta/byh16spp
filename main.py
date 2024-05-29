@@ -485,7 +485,8 @@ def verifyCode(cap_code):
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(cap_code)
                 reg_code_event(str(item['codeId']))
-                print('Call API to store code event')
+                if debugging:
+                    print('Calling API to store code event')
             else:
                 event_pkg = {"codeId":str(item['codeId']),"picId":"NA",
                              "CoreSim":config['sim']['value'],"timestamp":
@@ -512,15 +513,6 @@ def reg_code_event(code_id):
     data = {"codeId": code_id, "picId": "NA", "CoreSim": config['sim']['value']}
     url = config['sim']['url'] + config['sim']['api_codes_events']
     jsonLen = len(str(data).encode('utf-8'))
-    # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
-    # utime.sleep(1)
-
-    # global keepMonitorSIM800L
-    # instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
-    # gsm.write(instr.encode())
-    # utime.sleep(1)
-
-    # Enable bearer 1.
 
     gsm.write('AT+HTTPSSL=0\r\n')
     utime.sleep(1)
@@ -542,6 +534,7 @@ def reg_code_event(code_id):
 
     # instr = 'AT+HTTPPARA="URL","%s"\r' % url
     # gsm.write(instr.encode())
+
     gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
     utime.sleep(2)
 

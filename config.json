@@ -16,17 +16,18 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : true,
+		"demo" : false,
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
 		"settingsCode" : "1324",
-		"rotate":true
+		"rotate":false
 		},
 	"sim":{
 		"value":"+526641942241",
 		"apn": "internet.itelcel.com",
 		"APN_USER" : "webgpr",
 		"APN_PWD" : "webgprs2002",
+		"url_": "http://187.250.84.192:5500/",
 		"url": "http://100.24.58.74/",
 		"api_alerts" : "api/alerts/",
 		"api_codes_events" : "api/codeEvent/new",
