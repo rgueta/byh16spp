@@ -16,11 +16,11 @@
 		"dateTimeFormat_" : "%d/%m/%Y %H:%M:%S",
 		"debugging": true,
 		"show_code": true,
-		"demo" : false,
+		"demo" : true,
 		"pwdRST": "123456",
 		"openByCode" : "gate", ">>> Comment, alertate values":"magnet or gate",
 		"settingsCode" : "1324",
-		"rotate":false
+		"rotate":true
 		},
 	"sim":{
 		"value":"+526641942241",
@@ -86,7 +86,7 @@
 				["2", "5", "8", "0"], 
 				["3", "6", "9", "#"], 
 				["A", "B", "C", "D"]
-			  ],"default":"hardPlastic"
+			  ],"default":"flex"
 			},
 	"pi_pins" : {
 		"gsm_TX" : 0,
