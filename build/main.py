@@ -6,7 +6,7 @@ import _thread
 from ssd1306_non_rotate import SSD1306_I2C
 import json
 import utime
-import magnet
+import magnet_old
 import gate
 import initSetup
 # import time
@@ -330,7 +330,7 @@ def verifyCode(code):
         if code == item['code']:
             print('codigo valido..! userId : ' + str(item['userId']))
             song('ok')
-            magnet.Activate()
+            magnet_old.Activate()
             if send_code_events:
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(code)
@@ -676,7 +676,7 @@ def simResponse(timer):
                     if 'peatonal' in msg[1]:
                         print('execfile -> magnet.py')
                         #                         Activate()
-                        magnet.Activate()
+                        magnet_old.Activate()
                     elif 'vehicular' in msg[1]:
                         print('execfile -> gate.py')
                         gate.Activate()
