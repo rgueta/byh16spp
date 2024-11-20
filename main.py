@@ -5,7 +5,7 @@ from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # ty
 # from umqtt.simple import MQTTClient
 import json
 import utime # type: ignore
-import magnet
+import magnet_old
 import gate
 import initSetup
 import jsonTools
@@ -478,7 +478,7 @@ def verifyCode(cap_code):
             ShowMainFrame()
             code=''
             if openByCode == 'magnet':
-                magnet.Activate()
+                magnet_old.Activate()
             elif openByCode == 'gate':
                 gate.Activate()
             if send_code_events:
@@ -1019,7 +1019,7 @@ def simResponse(timer):
                 if debugging:
                     print('Abriendo', msg)
                 if 'peatonal' in msg[1]:
-                    magnet.Activate()
+                    magnet_old.Activate()
                 elif 'vehicular' in msg[1]:
                     gate.Activate()
                 return
