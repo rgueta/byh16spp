@@ -5,7 +5,7 @@ from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # ty
 # from umqtt.simple import MQTTClient
 import json
 import utime # type: ignore
-import magnet_old
+import magnet
 import gate
 import initSetup
 import jsonTools
