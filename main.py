@@ -478,7 +478,7 @@ def verifyCode(cap_code):
             ShowMainFrame()
             code=''
             if openByCode == 'magnet':
-                magnet_old.Activate()
+                magnet.Activate()
             elif openByCode == 'gate':
                 gate.Activate()
             if send_code_events:
@@ -1019,7 +1019,7 @@ def simResponse(timer):
                 if debugging:
                     print('Abriendo', msg)
                 if 'peatonal' in msg[1]:
-                    magnet_old.Activate()
+                    magnet.Activate()
                 elif 'vehicular' in msg[1]:
                     gate.Activate()
                 return
