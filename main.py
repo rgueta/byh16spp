@@ -1127,6 +1127,9 @@ def simResponse(timer):
                     if msg[2] == 'pwdRST':
                         pwdRST = msg[3]
 
+                    if msg[2] == 'send_code_events':
+                        send_code_events = msg[3]
+
                     ShowMainFrame()
                     return    
         #endregion super andmin--------------------
