@@ -128,7 +128,7 @@ col_pins = [Pin(pin_name, pull=Pin.PULL_DOWN) for pin_name in COLS]
 
 # region ------------ SIM800L  -----------------------
 
-send_code_events = config['sim']['send_code_events']
+sendCodeEvents = config['sim']['sendCodeEvents']
 admin_sim = config['app']['admin_sim'].split(',')
 apn = config['sim']['apn']
 serial_port = config['sim']['serial_port']
@@ -481,7 +481,7 @@ def verifyCode(cap_code):
                 magnet.Activate()
             elif openByCode == 'gate':
                 gate.Activate()
-            if send_code_events:
+            if sendCodeEvents:
                 # reg_code_event(str(item['codeId']))
                 # reg_code_event(cap_code)
                 reg_code_event(str(item['codeId']))
@@ -492,7 +492,7 @@ def verifyCode(cap_code):
                              "CoreSim":config['sim']['value'],"timestamp":
                              rtc.datetime()}
 
-                jsonTools.updJson('c','events.json','events',event_pkg,'')
+                jsonTools.updJson('c','events.json','events','', event_pkg)
                 # gsm.write('AT+CCLK?\r\n')
                 utime.sleep(1)
 
@@ -896,6 +896,45 @@ def getLocalTimestamp():
 #             utime.sleep(3)
 # endregion
 
+#----------------------------------------------
+# msg: message to send
+# type: to send Normal or write to memory to send later
+#      n: Normal, w: Write to memory
+# time: time to wait for assign message 
+#---------------------------------------------
+
+
+def sendSMS(msg, type = 'n', time = 1, trigger = 0):
+    global admin_sim
+    for i, item in enumerate(admin_sim):
+        if debugging:
+            print('sent msg to: ' + item)
+        utime.sleep(1)
+        if type == 'n':
+            # gsm.write('AT+CMGS="' + item + '"\r\n')
+            # utime.sleep(time)
+            # gsm.write(str(msg) + "\r\n")
+            # gsm.write('\x1A')  # Enable to send SMS
+            # utime.sleep(1)
+
+
+            gsm.write('AT+CMGS="' + item + '"\r')
+            utime.sleep(time)
+            gsm.write(str(msg) + "\r\x1A")  # '\x1A' Enable to send SMS
+            # gsm.write('\x1A')  # Enable to send SMS
+            utime.sleep(1)
+
+        else: # write to memory
+            gsm.write('AT+CMGW="' + item +  '"\r')
+            utime.sleep(time)
+            gsm.write(str(msg) + "\r\x1A")
+            utime.sleep(time)
+            # if trigger == 1:
+            #     utime.sleep(time)
+            #     gsm.write('AT+CMSS=3"' + item + '"\r')
+            #     utime.sleep(time)
+
+
 def simResponse(timer):
     # def simResponse():
     global tupleToday
@@ -914,6 +953,7 @@ def simResponse(timer):
     global oled1
     global i2c1
     global rotate_display
+    global sendCodeEvents
 
     msg = ''
     # try:
@@ -966,12 +1006,12 @@ def simResponse(timer):
             # Line to get SMS text
             response = str(gsm.readline(), encoding).rstrip('\r\n')
 
-            role = jsonTools.updJson('r', 'restraint.json','sim', senderSim,'',True,'role')
+            role = jsonTools.updJson('r', 'restraint.json','user', 'sim', senderSim, True,'role')
             # Check extrange sender----------------------------------
-            if not jsonTools.updJson('r', 'restraint.json','sim', senderSim, '',False):
+            if not jsonTools.updJson('r', 'restraint.json','user', 'sim', senderSim, False):
                 timestamp = getLocalTimestamp()
                 pkg = { "sim" : senderSim, "cmd" : response, "eventAt" : timestamp }
-                jsonTools.updJson('c', 'extrange.json','events', pkg, '')
+                jsonTools.updJson('c', 'extrange.json','events', '', pkg)
 
                 #  --- send extrage info to admin  -------
                 sendSMS('Extrange sim: ' + senderSim + ' \n,cmd: ' + response
@@ -1009,7 +1049,7 @@ def simResponse(timer):
                 api_data = {"userId": msg[3], "date": msg[2],
                             "code": msg[1], "visitorSim": msg[4],
                             "codeId": msg[5]}
-                jsonTools.updJson('c', 'codes.json','codes', api_data, '')
+                jsonTools.updJson('c', 'codes.json','codes', '', api_data)
                 cleanCodes(1, '')
                 ShowMainFrame()
                 return
@@ -1031,29 +1071,23 @@ def simResponse(timer):
                     api_data = { "name": msg[1], "house": msg[2], "sim": msg[3],
                                     "status": "unlock","id": msg[4],"role": msg[5],
                                     "lockedAt": getLocalTimestamp()}
-                    jsonTools.updJson('c', 'restraint.json','user', api_data, '')
+                    jsonTools.updJson('c', 'restraint.json','user', '',api_data, '')
                     return
                 
                 elif msg[0].strip() == 'updSim':
-                    jsonTools.updJson('updSim', 'restraint.json','sim', msg[1],
-                                       msg[2], False,'',getLocalTimestamp())
+                    jsonTools.updJson('updSim', 'restraint.json','user','sim', msg[1],
+                                       False, msg[2], getLocalTimestamp())
                     return
 
-                elif msg[0].strip() == 'lock':
-                    jsonTools.updJson('updStatus', 'restraint.json','sim', msg[3],
-                                       'lock', False,'',getLocalTimestamp())
-                    updRestraintList()
-                    return
-                
-                elif msg[0].strip() == 'unlock':
-                    jsonTools.updJson('updStatus','restraint.json','sim',msg[3],
-                                      'unlock',False,'',getLocalTimestamp())
+                elif msg[0].strip() == 'updStatus_lock' or msg[0].strip() == 'updStatus_unlock':
+                    jsonTools.updJson(msg[0].strip(), 'restraint.json','user','sim', msg[3],
+                                       False,'',getLocalTimestamp())
                     updRestraintList()
                     return
                 
                 elif msg[0].strip() == 'delete':
-                    jsonTools.updJson('delete','restraint.json','id',msg[1],
-                                      '',False,'',getLocalTimestamp())
+                    jsonTools.updJson('delete','restraint.json','user','id',msg[1],
+                                      False,'',getLocalTimestamp())
                     updRestraintList()
                     return
                 
@@ -1082,6 +1116,8 @@ def simResponse(timer):
                     elif msg[1] == 'extrange':
                         txtJson('extrange.json','events')
                     return
+                elif msg[0] == 'query':
+                    sendSMS(jsonTools.showData(msg[1], msg[2], msg[3]))
 
                 elif msg[0] == 'rst':
                     softReset()
@@ -1127,8 +1163,8 @@ def simResponse(timer):
                     if msg[2] == 'pwdRST':
                         pwdRST = msg[3]
 
-                    if msg[2] == 'send_code_events':
-                        send_code_events = msg[3]
+                    if msg[2] == 'sendCodeEvents':
+                        sendCodeEvents = msg[3]
 
                     ShowMainFrame()
                     return    
@@ -1198,43 +1234,6 @@ def simResponse(timer):
 # endregion ------ Timers  -----------------------------------
 
 
-#----------------------------------------------
-# msg: message to send
-# type: to send Normal or write to memory to send later
-#      n: Normal, w: Write to memory
-# time: time to wait for assign message 
-#---------------------------------------------
-
-
-def sendSMS(msg, type = 'n', time = 1, trigger = 0):
-    global admin_sim
-    for i, item in enumerate(admin_sim):
-        if debugging:
-            print('sent msg to: ' + item)
-        utime.sleep(1)
-        if type == 'n':
-            # gsm.write('AT+CMGS="' + item + '"\r\n')
-            # utime.sleep(time)
-            # gsm.write(str(msg) + "\r\n")
-            # gsm.write('\x1A')  # Enable to send SMS
-            # utime.sleep(1)
-
-
-            gsm.write('AT+CMGS="' + item + '"\r')
-            utime.sleep(time)
-            gsm.write(str(msg) + "\r\x1A")  # '\x1A' Enable to send SMS
-            # gsm.write('\x1A')  # Enable to send SMS
-            utime.sleep(1)
-
-        else: # write to memory
-            gsm.write('AT+CMGW="' + item +  '"\r')
-            utime.sleep(time)
-            gsm.write(str(msg) + "\r\x1A")
-            utime.sleep(time)
-            # if trigger == 1:
-            #     utime.sleep(time)
-            #     gsm.write('AT+CMSS=3"' + item + '"\r')
-            #     utime.sleep(time)
 
 
 
@@ -1330,7 +1329,13 @@ def isAdmin(sim):
             else:
                 if sim in item['sim']:
                     if item['role'] == 'admin':
-                        admin = True    
+                        admin = True
+    if debugging:
+        if admin:
+            print('Yes, it is Admin')
+        else:
+            print('It is Not Admin')
+
     return admin
 
 # --- Verify if sim card is inserted ---
