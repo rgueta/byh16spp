@@ -1217,9 +1217,6 @@ def simResponse(timer):
             pos = response.index(':')
             response_return = response[pos + 2: (pos + 2) + 9]
             d = RTC()
-
-            if debugging:
-                    print('sendStatus: ', sendStatus)
  
             if sendStatus:
                 sendStatus = False
