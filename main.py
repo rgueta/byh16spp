@@ -211,6 +211,9 @@ def signal_Status(titulo):
     utime.sleep(0.7)
     gsm.write('AT+CBC\r')
     utime.sleep(0.7)
+
+    if debugging:
+        print('signal_Status done..')
 # endregion  -----------------  Variable  ---------------------------
 
 # region----- Functions --------------------
@@ -333,6 +336,10 @@ def initial():
     utime.sleep(5)
     printHeader()
 
+    if debugging:
+        print('initial done..')
+    
+
 
 def init_gsm():
     # gsm.write('ATE0\r')    # Disable the Echo
@@ -358,6 +365,8 @@ def init_gsm():
         gsm.write('AT+GSMBUSY=1\r')
         utime.sleep(1)
 
+    if debugging:
+        print('init_gsm done..')
 
 def getSimInfo():
     gsm.write('AT+CCID\r')
@@ -408,6 +417,9 @@ def InitKeypad():
     for row in range(0, 4):
         for col in range(0, 4):
             row_pins[row].low()
+
+    if debugging:
+        print('InitKeypad done..')
 
 def tupleDateFROM_ISO(d):  # get just date from ISO datetime format '2022-01-05T10:53:13.00'
     tPosition = d.index('T')
@@ -466,6 +478,9 @@ def cleanCodes(type, code):
     json.dump(active_codes, f)
     f.close()
     ShowMainFrame()
+
+    if debugging:
+        print('cleanCodes done..')
 
 
 
@@ -1007,6 +1022,8 @@ def simResponse(timer):
             response = str(gsm.readline(), encoding).rstrip('\r\n')
 
             role = jsonTools.updJson('r', 'restraint.json','user', 'sim', senderSim, True,'role')
+            
+
             # Check extrange sender----------------------------------
             if not jsonTools.updJson('r', 'restraint.json','user', 'sim', senderSim, False):
                 timestamp = getLocalTimestamp()
@@ -1111,7 +1128,19 @@ def simResponse(timer):
 
                     elif msg[1] == 'restraint':
                         txtJson('restraint.json','user')
-                        # sendSMS('Hello','w',1,1)
+                    elif msg[1] == 'getConfig':
+                        gsm_status = []
+                        gsm_status.append({jsonTools.showData('config.json','app','admin_sim')})
+                        gsm_status.append({jsonTools.showData('config.json','app','demo')})
+                        gsm_status.append({jsonTools.showData('config.json','app','OpenByCode')})
+                        gsm_status.append({jsonTools.showData('config.json','app','settingsCode')})
+                        gsm_status.append({jsonTools.showData('config.json','app','pwdRST')})
+                        gsm_status.append({jsonTools.showData('config.json','sim','value')})
+                        gsm_status.append({jsonTools.showData('config.json','sim','url')})
+                        gsm_status.append({jsonTools.showData('config.json','sim','api_codes_events')})
+                        gsm_status.append({jsonTools.showData('config.json','sim','sendCodeEvents')})
+                        sendSMS(str(gsm_status))
+
 
                     elif msg[1] == 'extrange':
                         txtJson('extrange.json','events')
@@ -1172,7 +1201,10 @@ def simResponse(timer):
     
 
         elif '+CSQ:' in response:
+            
             pos = response.index(':')
+            print('entre aqui response: ', response)
+
             # global response_return
             response_return = response[pos + 2: (pos + 2) + 2]
             if sendStatus:
@@ -1185,6 +1217,9 @@ def simResponse(timer):
             pos = response.index(':')
             response_return = response[pos + 2: (pos + 2) + 9]
             d = RTC()
+
+            if debugging:
+                    print('sendStatus: ', sendStatus)
  
             if sendStatus:
                 sendStatus = False
@@ -1192,17 +1227,13 @@ def simResponse(timer):
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
-                gsm_status.append({'Demo': demo})
-                gsm_status.append({'Rotate': rotate_display})
-                gsm_status.append({'OpenByCode': openByCode})
-                gsm_status.append({'cfgCode': _settingsCode})
-                gsm_status.append({'pwdRST': pwdRST})
                 gsm_status.append({'RTC': d.datetime()})
 
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()
                         + '\n locked: ' + pkgListAccess())
-            elif debugging:
+
+            if debugging:
                 print('CBC : ', response_return)
         # return (response_return)
         elif '+CGREG:' in response:
@@ -1232,10 +1263,6 @@ def simResponse(timer):
         led25.value(0)
 
 # endregion ------ Timers  -----------------------------------
-
-
-
-
 
 
 def displayErrors():

@@ -10,10 +10,9 @@ if "__name__" == "__main__":
     print('initSetup run locally')
 
 def Initial():
-    print('initSetup..')
     magnetPin = Pin(config['pi_pins']['gpio_magnet'], Pin.OUT)
     gatePin = Pin(config['pi_pins']['gpio_gate_door'], Pin.OUT)
     magnetPin.value(0)
     gatePin.value(0)
-
+    print('initSetup done..')
 
