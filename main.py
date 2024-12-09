@@ -186,6 +186,15 @@ def changeSetting(value):
         jsonTools.updJson('u','config.json','app', 'debugging', False)
         applied = True
 
+    # Opening locally--------------------------------------
+    elif value == '20': # Open Gate
+        gate.Activate()
+        applied - True
+
+    elif value == '21': # Open Gate
+        magnet.Activate()
+        applied - True
+
     return applied
     
 # endregion
