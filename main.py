@@ -878,10 +878,7 @@ def PollKeypad(timer):
                         oled1.text(str(len(active_codes['codes']))+'', 1, 9)
                 oled1.show()
                 last_key_press = MATRIX[row][col]
-                if debugging:
-                    # disable because not working ok
-                    # DisplayMsg('Codigo: ' + code, 5)
-                    print("Codigo: " + code)
+
             else:  #Screen saver counter start -----------------------------------
                 if screen_saver <= 2000:
                     screen_saver += 1
