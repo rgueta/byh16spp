@@ -12,3 +12,4 @@ venv
 .idea/
 pyboard_bkup/
 *.mpy
+*_pcb*

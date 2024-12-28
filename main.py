@@ -1067,15 +1067,16 @@ def simResponse(timer):
                 
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
-                msg[3] = msg[3].rstrip('\r\n')
-                msg[4] = msg[4].rstrip('\r\n')
-                api_data = {"userId": msg[3], "date": msg[2],
-                            "code": msg[1], "visitorSim": msg[4],
-                            "codeId": msg[5]}
-                jsonTools.updJson('c', 'codes.json','codes', '', api_data)
-                cleanCodes(1, '')
-                ShowMainFrame()
-                return
+                if len(msg) > 5:
+                    msg[3] = msg[3].rstrip('\r\n')
+                    msg[4] = msg[4].rstrip('\r\n')
+                    api_data = {"userId": msg[3], "date": msg[2],
+                                "code": msg[1], "visitorSim": msg[4],
+                                "codeId": msg[5]}
+                    jsonTools.updJson('c', 'codes.json','codes', '', api_data)
+                    cleanCodes(1, '')
+                    ShowMainFrame()
+                    return
             
             elif msg[0].strip() == 'open':
                 # if not demo:
@@ -1308,17 +1309,17 @@ def isLocked(sim):
                 if item['status'] == 'unlock':
                     locked = False
                     break
-        else:
-            if len(item['sim']) < len(sim):
-                if item['sim'] in sim:
-                    if item['status'] == 'unlock':
-                        locked = False
-                        break
-            else:
-                if sim in item['sim']:
-                    if item['status'] == 'unlock':
-                        locked = False
-                        break
+        # else:
+        #     if len(item['sim']) < len(sim):
+        #         if item['sim'] in sim:
+        #             if item['status'] == 'unlock':
+        #                 locked = False
+        #                 break
+        #     else:
+        #         if sim in item['sim']:
+        #             if item['status'] == 'unlock':
+        #                 locked = False
+        #                 break
     return locked
 
 def isAnyAdmin(sim):
