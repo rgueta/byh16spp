@@ -16,7 +16,7 @@
             "name": "Ricardo Gueta",
             "sim": "+526641752182",
             "role": "admin",
-            "status": "unlock",
+            "status": "lock",
             "lockedAt": "24-04-23T18:22:19",
             "updatedAt": "24-11-28T07:06:47"
         },
@@ -42,7 +42,7 @@
         },
         {
             "id": "6646220a41cd4010c286eb4e",
-            "status": "lock",
+            "status": "unlock",
             "name": "Veronica Esteves",
             "lockedAt": "24-05-16T07:45:22",
             "house": "11",

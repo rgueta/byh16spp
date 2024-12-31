@@ -1,6 +1,7 @@
 # from micropython import const
 from micropython import * # type: ignore
 from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # type: ignore
+import time
 
 # from umqtt.simple import MQTTClient
 import json
@@ -237,7 +238,7 @@ def str_to_bool(s):
     # oled1.text(text,x,y)
     # 
 
-def DisplayMsg(msg,time):
+def DisplayMsg(msg,time:3):
     global WIDTH
     len_char = int(WIDTH / 8)
     oled1.fill(0)
@@ -988,6 +989,13 @@ def simResponse(timer):
             
         if 'ERROR' in response:
             print('simResponse,Error detected: ' + response)
+
+        # elif 'DOWNLOAD' in response:  # sending email
+        #     utime.sleep(1)
+        #     print('at download..')
+        #     gsm.write('"Hello"\r')
+        #     utime.sleep(4)
+
         elif '+CREG:' in response:  # Get sim card status
             global simStatus
             # response = str(gsm.readline(), encoding).rstrip('\r\n')
@@ -1021,6 +1029,8 @@ def simResponse(timer):
         # SMS----------------------
         elif '+CMT:' in response:
             senderSim = header[0][header[0].index('"') + 1: -1]
+            if debugging:
+                print('senderSim: ', senderSim)
             if(len(senderSim) >= 10):
                 senderSim = senderSim[-10:]
 
@@ -1079,14 +1089,32 @@ def simResponse(timer):
                     return
             
             elif msg[0].strip() == 'open':
-                # if not demo:
+                now = utime.time()
+                tspkg = 0
                 if debugging:
-                    print('Abriendo', msg)
-                if 'peatonal' in msg[1]:
-                    magnet.Activate()
-                elif 'vehicular' in msg[1]:
-                    gate.Activate()
-                return
+                    print('Abriendo ', msg)
+                    if len(msg) > 3: 
+                        print('date stamp: ', time.gmtime(int(msg[3][:10])))
+                        tspkg = int(msg[3][:10])
+
+                if len(msg) > 3: 
+                    if (now - tspkg) < 90:
+                        if 'peatonal' in msg[1]:
+                            magnet.Activate()
+                        elif 'vehicular' in msg[1]:
+                            gate.Activate()
+                        return
+                    else:
+                        if debugging:
+                            print('out of time')
+                            DisplayMsg('out of time')
+                            ShowMainFrame()
+                else:
+                    if debugging:
+                        print('no timestamp')
+                        DisplayMsg('no timestamp')
+                        ShowMainFrame()
+
             
         # region admin or neighborAdmin commands section -------------------------------------
             
@@ -1309,17 +1337,17 @@ def isLocked(sim):
                 if item['status'] == 'unlock':
                     locked = False
                     break
-        # else:
-        #     if len(item['sim']) < len(sim):
-        #         if item['sim'] in sim:
-        #             if item['status'] == 'unlock':
-        #                 locked = False
-        #                 break
-        #     else:
-        #         if sim in item['sim']:
-        #             if item['status'] == 'unlock':
-        #                 locked = False
-        #                 break
+        else:
+            if len(item['sim']) < len(sim):
+                if item['sim'] in sim:
+                    if item['status'] == 'unlock':
+                        locked = False
+                        break
+            else:
+                if sim in item['sim']:
+                    if item['status'] == 'unlock':
+                        locked = False
+                        break
     return locked
 
 def isAnyAdmin(sim):
@@ -1441,16 +1469,70 @@ def txtJson(file, key):
             utime.sleep(10)
 
 
+def sendCommand(command):
+    smd= command
+    smd=smd+'\r\n'
+    smds=smd.encode('ascii')
+    gsm.write(smds)
+    utime.sleep(1)
+    # line = gsm.read(80).decode('ascii').rstrip()
+    # print(line)
+   
+def sendEmail():
+    # EMAIL  - - - - -
+    USERNAME = "ricardogueta@gmail.com"  # Username for authentication
+    PASSWORD = "qyrhfseormkjjqug"  # Password for authentication
+    # PASSWORD = "qyrhfseormkjjqug"  # Password for authentication
+    SMTP_SERVER = "smtp.gmail.com"  # URL of SMTP server
+    # SSL_PORT = 465 #message sumbmission over SSL protocal
+    SSL_PORT = 587 #message sumbmission over TLS protocal
+
+    FROM = "ricardogueta@gmail.com"  # Name shown as sender
+    TO = "ricardogueta@gmail.com" # Mail address of the recipient
+    NAME = "privada_San_Juan"
+    message = "hello"
+
+    gsm.write('AT+CMEE=2\r') # Enable result code and use verbose values (will expand upon errors)
+    utime.sleep(2)
+
+    # gsm.write('AT+EMAILSSL=1\r') # 
+    # utime.sleep(2)
+
+    gsm.write('AT+EMAILCID=1\r') # Set paramaters of Email
+    utime.sleep(2)
+
+    # gsm.write('AT+EMAILTO=30\r') # Timeout for server response (defult 30 secs)
+    # utime.sleep(2)
+
+    gsm.write('AT+SMTPSRV="{}",{}\r'.format(SMTP_SERVER, SSL_PORT)) # Set SMTP server address and port
+    utime.sleep(2)
+
+    gsm.write('AT+SMTPAUTH=1,"{}","{}"\r'.format(USERNAME,PASSWORD)) # Set username and password.
+    utime.sleep(4)
+
+    gsm.write('AT+SMTPFROM="{}","{}"\r'.format(USERNAME,FROM)) # Set sender address and name
+    utime.sleep(2)
+
+    gsm.write('AT+SMTPRCPT=0,0,"{}","{}"\r'.format(TO,NAME)) # Set the recipients name
+    utime.sleep(2)
+
+    # gsm.write('AT+SMTPSUB="{}"\r'.format("This is sent from the core San Juan")) # Body of text
+    gsm.write('AT+SMTPSUB="Test"\r') # Body of text
+    utime.sleep(1)
+
+    lengthOfMessage = len(message)
+    gsm.write('AT+SMTPBODY={}\r'.format(str(lengthOfMessage))) #shouldn't be quoted
+    utime.sleep(3)
+
+    # gsm.write('{}\r'.format(message))
+    # utime.sleep(3.5)
+
+    gsm.write('AT+SMTPSEND\r')
+    utime.sleep(10)
+
 
 # endregion ------  functions --------------------------------------------------
 
-
-
-
-#
-# cleanCodes(1, '')  # -- clean by date
-# codesAvailable()
-# print("codes count  --- > ", len(code_list['codes']))
     
 try:
     # region  ----------------    Open CODES JSON files  --------------------
@@ -1516,6 +1598,12 @@ try:
 
         initial()
         song('initial')
+
+    # send email
+        # if debugging:
+        #     print('sending email')
+        # utime.sleep(2)
+        # sendEmail()
     
 except OSError:  # Open failed
     print('Error--> ', OSError)
