@@ -1,7 +1,8 @@
 # from micropython import const
 from micropython import * # type: ignore
 from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # type: ignore
-import time
+import uos # type: ignore
+import gc
 
 # from umqtt.simple import MQTTClient
 import json
@@ -11,6 +12,40 @@ import gate
 import initSetup
 import jsonTools
 import math
+
+
+# region Memory status  ----------------------
+
+def diskUsage(send = False):
+    s = uos.statvfs('/')
+    print(s)
+    U = s[0]*s[3]/1024
+    T = s[0]*s[2]/1024
+    P = '{0:.2f}%'.format(((T - U ) * 100) / T)
+    msg = 'Disk space: {0} Kb free space out of {1} Kb ({2} in use)'.format(U, T, P)
+    if debugging:
+        print(msg)
+
+    if send:
+        return msg 
+
+def memUsage(send = False):
+    gc.collect()
+    F = gc.mem_free()
+    A = gc.mem_alloc()
+    T = F + A
+    P = '{0:.2f}%'.format(100-F/T*100)
+    msg = 'Ram memory: {0:.2f} Kb free out of {1:.2f} Kb ({2} in use)'.format(F/1024, T/1024, P)
+
+    if debugging:
+        print(msg)
+
+    if send:
+        return msg 
+
+        return get_dir_size(path)
+
+# endregion   -----------------------------
 
 #####1 git branch alert_open_event  -----------------
 
@@ -238,7 +273,7 @@ def str_to_bool(s):
     # oled1.text(text,x,y)
     # 
 
-def DisplayMsg(msg,time:3):
+def DisplayMsg(msg,time=3):
     global WIDTH
     len_char = int(WIDTH / 8)
     oled1.fill(0)
@@ -443,6 +478,19 @@ def daysBetween(d1, d2):
     d2 += (1, 0, 0, 0, 0)
     return utime.mktime(d1) // (24 * 3600) - utime.mktime(d2) // (24 * 3600)
 
+# ----------
+# option : date type options
+# date : date package
+# ----------
+def toHumanDate(option = 1, date = any):
+    # option 1 format (2025, 1, 1, 13, 14, 35, 2, 1) (YYYY, M, D, hh, mm, ss, weekday, yearday)
+    # option 2 format "2024-05-30T23:55:00.00"
+    dateH = ''
+    if option == 1:
+        # arr = date.split(',')
+        dateH = str(date[0]) + '-' + str(date[1]) + '-' + str(date[2]) + 'T' + str(date[3]) + ':' + str(date[4]) + ':' + str(date[5])
+
+    return dateH
 
 # region -----------  codes  --------------------
 # ---  1 : by date, 2 : by duplicity
@@ -493,7 +541,6 @@ def cleanCodes(type, code):
         print('cleanCodes done..')
 
 
-
 def verifyCode(cap_code):
     global active_codes
     global code
@@ -519,9 +566,11 @@ def verifyCode(cap_code):
 
                 jsonTools.updJson('c','events.json','events','', event_pkg)
                 # gsm.write('AT+CCLK?\r\n')
-                utime.sleep(1)
+                # utime.sleep(1)
 
-                print('event registered locally')
+                if debugging:
+                    print('event register locally')
+
             break
 
         elif i + 1 == len(active_codes['codes']):
@@ -532,7 +581,6 @@ def verifyCode(cap_code):
             ShowMainFrame()
             code = ''
             
-
 
 def reg_code_event(code_id):
     data = {"codeId": code_id, "picId": "NA", "CoreSim": config['sim']['value']}
@@ -585,6 +633,9 @@ def reg_code_event(code_id):
 
     gsm.write('AT+SAPBR=0,1\r')
     utime.sleep(1)
+
+def reg_local_event(pkg):
+    jsonTools.updJson('c','events.json','events','', pkg)
 
 def alert_event(msg,title,subtitle):
     # line below its just to put some data into data variable but not used for message by itself
@@ -1089,31 +1140,32 @@ def simResponse(timer):
                     return
             
             elif msg[0].strip() == 'open':
-                now = utime.time()
-                tspkg = 0
-                if debugging:
-                    print('Abriendo ', msg)
-                    if len(msg) > 3: 
-                        print('date stamp: ', time.gmtime(int(msg[3][:10])))
-                        tspkg = int(msg[3][:10])
-
                 if len(msg) > 3: 
-                    if (now - tspkg) < 90:
+                    now = utime.time()
+                    tspkg = 0
+                    tspkg = int(msg[3][:10])
+                    diff = now - tspkg
+                            
+                    if diff < 90 and diff > 0:
+                        if debugging:
+                            print('Abriendo ', msg)
+                    
                         if 'peatonal' in msg[1]:
                             magnet.Activate()
+                            
                         elif 'vehicular' in msg[1]:
                             gate.Activate()
+
+                        reg_local_event({'door':msg[1],'phone': senderSim,'phoneId': msg[2], 'date': toHumanDate(1,utime.gmtime(int(msg[3][:10])))})
                         return
                     else:
                         if debugging:
                             print('out of time')
-                            DisplayMsg('out of time')
-                            ShowMainFrame()
+                            showMsg('out of time')
                 else:
                     if debugging:
                         print('no timestamp')
-                        DisplayMsg('no timestamp')
-                        ShowMainFrame()
+                        showMsg('no timestamp')
 
             
         # region admin or neighborAdmin commands section -------------------------------------
@@ -1144,7 +1196,14 @@ def simResponse(timer):
                     return
                 
                 elif msg[0] == 'active_codes':
-                    sendSMS('codes available --> ' + pkgListCodes())
+                    sendSMS('codes available: ' + pkgListCodes())
+                    return
+                elif msg[0] == 'diskStatus':
+                    sendSMS(diskUsage(True))
+                    return
+                
+                elif msg[0] == 'memStatus':
+                    sendSMS(memUsage(True))
                     return
                 
             else:
@@ -1598,6 +1657,9 @@ try:
 
         initial()
         song('initial')
+
+    diskUsage()
+    memUsage()
 
     # send email
         # if debugging:
