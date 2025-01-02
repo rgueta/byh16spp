@@ -197,20 +197,24 @@ def showData(file,key,value = '', mov = 'r'):
             if item == key:
                 if value == '':
                     if mov == 'c':
-                        print('Item added --> ', jsonlist[item][-1])
-                    else:    
-                        print('data changed --> ', jitem)
+                        if debugging:
+                            print('Item added --> ', jsonlist[item][-1])
+                    else:
+                        if debugging:
+                            print('data changed --> ', jitem)
                     break
                 else:
                     if mov == 'c':
-                        print('Item added --> ', jsonlist[item][-1])
+                        if debugging:
+                            print('Item added --> ', jsonlist[item][-1])
                     elif mov == 'r':
                         if jsonlist[item].get(value) is not None:
                             return value + ' : ' + str(jsonlist[item][value])
                         else:
                             return 'item not exists'
                     else:
-                        print('data changed --> ', jsonlist[item])
+                        if debugging:
+                            print('data changed --> ', jsonlist[item])
                     break
 
 
