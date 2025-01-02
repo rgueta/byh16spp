@@ -484,11 +484,13 @@ def daysBetween(d1, d2):
 # ----------
 def toHumanDate(option = 1, date = any):
     # option 1 format (2025, 1, 1, 13, 14, 35, 2, 1) (YYYY, M, D, hh, mm, ss, weekday, yearday)
-    # option 2 format "2024-05-30T23:55:00.00"
+    # option 2 format (2025, 1, 1, 3, 13, 14, 35, 1) (YYYY, M, D, weekday, hh, mm, ss, yearday)
     dateH = ''
     if option == 1:
-        # arr = date.split(',')
         dateH = str(date[0]) + '-' + str(date[1]) + '-' + str(date[2]) + 'T' + str(date[3]) + ':' + str(date[4]) + ':' + str(date[5])
+    
+    if option == 2:
+        dateH = str(date[0]) + '-' + str(date[1]) + '-' + str(date[2]) + 'T' + str(date[4]) + ':' + str(date[5]) + ':' + str(date[6])
 
     return dateH
 
@@ -560,9 +562,9 @@ def verifyCode(cap_code):
                 if debugging:
                     print('Calling API to store code event')
             else:
-                event_pkg = {"codeId":str(item['codeId']),"picId":"NA",
-                             "CoreSim":config['sim']['value'],"timestamp":
-                             rtc.datetime()}
+                event_pkg = {"code" :cap_code,"codeId":str(item['codeId']),"picId":"NA",
+                             "CoreSim":config['sim']['value'],"date":
+                             toHumanDate(2,rtc.datetime())}
 
                 jsonTools.updJson('c','events.json','events','', event_pkg)
                 # gsm.write('AT+CCLK?\r\n')
