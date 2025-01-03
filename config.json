@@ -33,13 +33,14 @@
 		"url": "http://100.24.58.74/",
 		"api_alerts": "api/alerts/",
 		"api_codes_events": "api/codeEvent/new",
+		"api_coreEvents": "api/coreEvent/new",
 		"serial_port": "/dev/ttyAMA0",
 		"serial_baud": 115200,
 		"serial_timeout": 0.1,
 		"HTTPACTION_waitTime": 6,
 		"battery_status_line": 2,
 		"api_get_line": 5,
-		"sendCodeEvents": true,
+		"sendCodeEvents": false,
 		"incoming_calls": false
 	},
 	"backup_lines": {

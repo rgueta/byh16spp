@@ -64,10 +64,6 @@ else:
     from ssd1306_non_rotate import SSD1306_I2C
     print('non rotate display------------------')
 
-event = open('events.json')
-events_log = json.loads(event.read())
-event.close()
-
 restraint = open('restraint.json')
 restraint_list = json.loads(restraint.read())
 restraint.close()
@@ -515,13 +511,6 @@ def cleanCodes(type, code):
                                   0,0))) / 86400  # type: ignore
 
             if dtcode < now :
-            # instead of days_between check it out
-            # days_between = daysBetween(tupleDateFROM_ISO(item['date']), tupleToday)
-            # print('code --> ' + item['code'] +
-            #       ', date: ' + item['date'] + ', daysBetweeb --> ', days_between)
-            # if days_between < 0:
-
-                # del code_list['codes'][i]
                 if debugging:
                     print('Code deleted ----> ', item['code'])
             else:
@@ -567,8 +556,6 @@ def verifyCode(cap_code):
                              toHumanDate(2,rtc.datetime())}
 
                 jsonTools.updJson('c','events.json','events','', event_pkg)
-                # gsm.write('AT+CCLK?\r\n')
-                # utime.sleep(1)
 
                 if debugging:
                     print('event register locally')
@@ -635,6 +622,8 @@ def reg_code_event(code_id):
 
     gsm.write('AT+SAPBR=0,1\r')
     utime.sleep(1)
+
+
 
 def reg_local_event(pkg):
     jsonTools.updJson('c','events.json','events','', pkg)
@@ -709,8 +698,75 @@ def sendCodeToVisitor(code, visitorSim):
     gsm.write(chr(26))
     utime.sleep(0.5)
 
-
 # endregion --------  codes --------------------------------
+
+
+# region --------  events --------------------------------
+
+def uploadEvents():
+    eve = open('events.json')
+    events = json.loads(eve.read())
+    eve.close()
+    url = config['sim']['url'] + config['sim']['api_coreEvents']
+    jsonLen = len(str(events['events']).encode('utf-8'))
+
+    try:
+        
+        gsm.write('AT+HTTPSSL=0\r\n')
+        utime.sleep(1)
+
+        gsm.write('AT+HTTPTERM\r')
+        utime.sleep(1)
+
+        gsm.write('AT+SAPBR=1,1\r')
+        utime.sleep(2)
+
+        gsm.write('AT+SAPBR=2,1\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPINIT\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPPARA="CID",1\r')
+        utime.sleep(2)
+
+        # instr = 'AT+HTTPPARA="URL","%s"\r' % url
+        # gsm.write(instr.encode())
+
+        gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
+        utime.sleep(2)
+
+
+        gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
+        utime.sleep(1.5)
+
+        gsm.write(json.dumps(events['events']) + '\r')
+        utime.sleep(3.5)
+
+        # 0 = GET, 1 = POST, 2 = HEAD
+        gsm.write('AT+HTTPACTION=1\r')
+        utime.sleep(5)
+
+        gsm.write('AT+HTTPREAD\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPTERM\r')
+        utime.sleep(1)
+
+        gsm.write('AT+SAPBR=0,1\r')
+        utime.sleep(1)
+
+        # clear events -----------------------------
+        # jsonTools.updJson('d','events.json','events','', '')
+
+    except OSError:  # Open failed
+        print('Error--> ', OSError)
+
+
+# endregion --------  events --------------------------------
 
 
 # region ------ Timers  -----------------------------------
@@ -1243,6 +1299,10 @@ def simResponse(timer):
                     return
                 elif msg[0] == 'query':
                     sendSMS(jsonTools.showData(msg[1], msg[2], msg[3]))
+
+                elif msg[0] == 'uploadEvents':
+                    uploadEvents()
+                    return
 
                 elif msg[0] == 'rst':
                     softReset()

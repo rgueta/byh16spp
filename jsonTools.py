@@ -53,6 +53,19 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                             showData(file,key,value,mov)
                         break
 
+                    elif mov == 'd':   # delete
+                        if debugging :
+                            print('Item deleted --> ', file_list[item])
+                        del file_list[item]
+                        f = open(file,"w")
+                        if file == 'events.json':
+                            file_list = {"events" : []}
+
+                        json.dump(file_list, f)
+                        f.close()
+
+                        break
+
                 for j, jitem in enumerate(file_list[item]):
                     # json item is string
                     if type(jitem) is str:
