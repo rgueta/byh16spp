@@ -55,7 +55,7 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
 
                     elif mov == 'd':   # delete
                         if debugging :
-                            print('Item deleted --> ', file_list[item])
+                            print('Item deleting --> ', file_list[item])
                         del file_list[item]
                         f = open(file,"w")
                         if file == 'events.json':

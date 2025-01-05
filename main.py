@@ -1,10 +1,7 @@
-# from micropython import const
 from micropython import * # type: ignore
 from machine import UART, Pin, I2C, Timer, RTC, ADC, PWM, reset, soft_reset # type: ignore
 import uos # type: ignore
 import gc
-
-# from umqtt.simple import MQTTClient
 import json
 import utime # type: ignore
 import magnet
@@ -46,8 +43,6 @@ def memUsage(send = False):
         return get_dir_size(path)
 
 # endregion   -----------------------------
-
-#####1 git branch alert_open_event  -----------------
 
 # region -------- json file config, events, restraint  ------------------
 
@@ -257,7 +252,6 @@ def signal_Status(titulo):
         print('signal_Status done..')
 # endregion  -----------------  Variable  ---------------------------
 
-# region----- Functions --------------------
 
 def str_to_bool(s):
     if s.lower() == 'true':
@@ -266,8 +260,7 @@ def str_to_bool(s):
         return False
 
 # region ----------  show on display ------------------
-    # oled1.text(text,x,y)
-    # 
+
 
 def DisplayMsg(msg,time=3):
     global WIDTH
@@ -349,7 +342,86 @@ def ShowMainFrame():
     oled1.show()
     screen_saver = 0
 
-# endregion
+# endregion  ----------------------
+
+
+'''
+ ------------------------------------------
+ function to send data to server
+ option : 1 = json type, 2 = string type
+ data   : data to send 
+ lenght : lenght parameter required for POST   
+ url    : API url address
+ ------------------------------------------
+
+'''
+def postData(type = 1, data = any,lenght = 0, url = ''):
+    strData = ''
+
+    if type == 1:
+        strData = json.dumps(data) + '\r'
+
+    elif type == 2:
+        strData = data + '\r'
+
+    try:
+        
+        gsm.write('AT+HTTPSSL=0\r\n')
+        utime.sleep(1)
+
+        gsm.write('AT+HTTPTERM\r')
+        utime.sleep(1)
+
+        gsm.write('AT+SAPBR=1,1\r')
+        utime.sleep(2)
+
+        gsm.write('AT+SAPBR=2,1\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPINIT\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPPARA="CID",1\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
+        utime.sleep(2)
+
+
+        gsm.write('AT+HTTPDATA=%s,5000\r' % str(lenght))
+        utime.sleep(1.5)
+
+        gsm.write(strData)
+        utime.sleep(3.5)
+
+        # 0 = GET, 1 = POST, 2 = HEAD
+        gsm.write('AT+HTTPACTION=1\r')
+        utime.sleep(5)
+
+        gsm.write('AT+HTTPREAD\r')
+        utime.sleep(2)
+
+        gsm.write('AT+HTTPTERM\r')
+        utime.sleep(1)
+
+        gsm.write('AT+SAPBR=0,1\r')
+        utime.sleep(4)
+
+        # clear events -----------------------------
+        jsonTools.updJson('d','events.json','events','', '')
+
+        eve = open('events.json')
+        events = json.loads(eve.read())
+        eve.close()
+
+        print('after cleared len events: ', len(events['events']))
+
+    except OSError:  # Open failed
+        print('Error--> ', OSError)
+
 
 def updTimestamp():
     gsm.write('AT+CCLK?\r')
@@ -379,8 +451,6 @@ def initial():
 
     if debugging:
         print('initial done..')
-    
-
 
 def init_gsm():
     # gsm.write('ATE0\r')    # Disable the Echo
@@ -474,10 +544,13 @@ def daysBetween(d1, d2):
     d2 += (1, 0, 0, 0, 0)
     return utime.mktime(d1) // (24 * 3600) - utime.mktime(d2) // (24 * 3600)
 
-# ----------
-# option : date type options
-# date : date package
-# ----------
+'''
+ -------------------------
+ Convert date to human format 
+ option : date type options
+ date : date package
+ -------------------------
+'''
 def toHumanDate(option = 1, date = any):
     # option 1 format (2025, 1, 1, 13, 14, 35, 2, 1) (YYYY, M, D, hh, mm, ss, weekday, yearday)
     # option 2 format (2025, 1, 1, 3, 13, 14, 35, 1) (YYYY, M, D, weekday, hh, mm, ss, yearday)
@@ -576,118 +649,13 @@ def reg_code_event(code_id):
     url = config['sim']['url'] + config['sim']['api_codes_events']
     jsonLen = len(str(data).encode('utf-8'))
 
-    gsm.write('AT+HTTPSSL=0\r\n')
-    utime.sleep(1)
-
-    gsm.write('AT+HTTPTERM\r')
-    utime.sleep(1)
-
-    gsm.write('AT+SAPBR=1,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+SAPBR=2,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPINIT\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CID",1\r')
-    utime.sleep(2)
-
-    # instr = 'AT+HTTPPARA="URL","%s"\r' % url
-    # gsm.write(instr.encode())
-
-    gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
-    utime.sleep(2)
-
-
-    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-    utime.sleep(1.5)
-
-    gsm.write(json.dumps(data) + '\r')
-    utime.sleep(3.5)
-
-    # 0 = GET, 1 = POST, 2 = HEAD
-    gsm.write('AT+HTTPACTION=1\r')
-    utime.sleep(5)
-
-    gsm.write('AT+HTTPREAD\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPTERM\r')
-    utime.sleep(1)
-
-    gsm.write('AT+SAPBR=0,1\r')
-    utime.sleep(1)
+    postData(1, data, jsonLen, url)
 
 
 
 def reg_local_event(pkg):
     jsonTools.updJson('c','events.json','events','', pkg)
 
-def alert_event(msg,title,subtitle):
-    # line below its just to put some data into data variable but not used for message by itself
-    data = {"msg":"message"}
-    subUrl = config['sim']['url'] + config['sim']['api_alerts'] + coreId
-    
-    url = subUrl + '/' + msg
-    if(title != ''):
-        url += '/' + title
-    
-    if(subtitle != ''):
-        url += '/' + subtitle
-    
-    jsonLen = len(str(data).encode('utf-8'))
-    # gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
-    # utime.sleep(1)
-
-    # global keepMonitorSIM800L
-    # instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
-    # gsm.write(instr.encode())
-    # utime.sleep(1)
-
-    gsm.write('AT+SAPBR=1,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+SAPBR=2,1\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPINIT\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CID",1\r')
-    utime.sleep(2)
-
-    # instr = 'AT+HTTPPARA="URL","%s"\r' % url
-    # gsm.write(instr.encode())
-    gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
-    utime.sleep(2)
-
-
-    gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-    utime.sleep(1.5)
-
-    gsm.write(json.dumps(data) + '\r')
-    utime.sleep(3.5)
-
-    # 0 = GET, 1 = POST, 2 = HEAD
-    gsm.write('AT+HTTPACTION=1\r')
-    utime.sleep(5)
-
-    gsm.write('AT+HTTPREAD\r')
-    utime.sleep(2)
-
-    gsm.write('AT+HTTPTERM\r')
-    utime.sleep(2)
-
-    gsm.write('AT+SAPBR=0,1\r')
-    utime.sleep(1)
 
 def sendCodeToVisitor(code, visitorSim):
     #  --- send status  -------
@@ -707,69 +675,23 @@ def uploadEvents():
     eve = open('events.json')
     events = json.loads(eve.read())
     eve.close()
-    url = config['sim']['url'] + config['sim']['api_coreEvents']
-    jsonLen = len(str(events['events']).encode('utf-8'))
+   
+    if len(events['events']) > 0:
+        url = config['sim']['url'] + config['sim']['api_coreEvents']
+        jsonLen = len(str(events['events']).encode('utf-8'))
 
-    try:
-        
-        gsm.write('AT+HTTPSSL=0\r\n')
-        utime.sleep(1)
-
-        gsm.write('AT+HTTPTERM\r')
-        utime.sleep(1)
-
-        gsm.write('AT+SAPBR=1,1\r')
-        utime.sleep(2)
-
-        gsm.write('AT+SAPBR=2,1\r')
-        utime.sleep(2)
-
-        gsm.write('AT+HTTPINIT\r')
-        utime.sleep(2)
-
-        gsm.write('AT+HTTPPARA="CID",1\r')
-        utime.sleep(2)
-
-        # instr = 'AT+HTTPPARA="URL","%s"\r' % url
-        # gsm.write(instr.encode())
-
-        gsm.write('AT+HTTPPARA="URL","%s"\r' % url)
-        utime.sleep(2)
-
-        gsm.write('AT+HTTPPARA="CONTENT","application/json"\r')
-        utime.sleep(2)
-
-
-        gsm.write('AT+HTTPDATA=%s,5000\r' % str(jsonLen))
-        utime.sleep(1.5)
-
-        gsm.write(json.dumps(events['events']) + '\r')
-        utime.sleep(3.5)
-
-        # 0 = GET, 1 = POST, 2 = HEAD
-        gsm.write('AT+HTTPACTION=1\r')
-        utime.sleep(5)
-
-        gsm.write('AT+HTTPREAD\r')
-        utime.sleep(2)
-
-        gsm.write('AT+HTTPTERM\r')
-        utime.sleep(1)
-
-        gsm.write('AT+SAPBR=0,1\r')
-        utime.sleep(1)
-
-        # clear events -----------------------------
-        # jsonTools.updJson('d','events.json','events','', '')
-
-    except OSError:  # Open failed
-        print('Error--> ', OSError)
-
+        postData(1, events['events'], jsonLen, url)
+   
+    else:
+        if debugging:
+            print('No events')
+            showMsg('No events')
 
 # endregion --------  events --------------------------------
 
 
 # region ------ Timers  -----------------------------------
+
 def tick25(timer):
     global led25
     led25.toggle()
@@ -967,7 +889,6 @@ def PollKeypad(timer):
                         warning_message_active = True
                         break
                     code = code_hide = ''
-                # region keypad enter option -----------------
                 else:
                     code = code + MATRIX[row][col]
                     code_hide = code_hide + code_hide_mark
@@ -1002,38 +923,15 @@ def getLocalTimestamp():
           str(timestamp[12:14]) + ':' + str(timestamp[15:17])))
     return tsf
 
-# region send_data_to_broker  -----------------------
-# def send_data_to_broker(data):
-#     print("Attempting to send data to broker")
-#     max_mqtt_attempts = 5
-#     attempts = 0
-#     published = False
-#     connected = False
-#     while not published and attempts < max_mqtt_attempts:
-#         try:
-#             mqtt_client.connect()
-#             connected = True
-#             mqtt_client.publish('demo_pp', json.dumps(data))
-#             mqtt_client.disconnect()
-#             published = True
-#             print("Data sent to broker")
-#         except Exception as e:
-#             print('Error at send data to broker --> ', e)
-#             print('Attempt %s of %s' % attempts, max_mqtt_attempts)
-#             if connected:
-#                 mqtt_client.disconnect()
-#                 connected = False
-#             attempts += 1
-#             utime.sleep(3)
-# endregion
 
+'''
 #----------------------------------------------
 # msg: message to send
 # type: to send Normal or write to memory to send later
 #      n: Normal, w: Write to memory
 # time: time to wait for assign message 
 #---------------------------------------------
-
+'''
 
 def sendSMS(msg, type = 'n', time = 1, trigger = 0):
     global admin_sim
@@ -1535,11 +1433,13 @@ def updRestraintList():
     restraint_list = json.loads(jaccess.read())
     jaccess.close()
 
+'''
 #---------------------------------------------
 # file: json file name to read
 # key:  key to read
 # Desc: Convert Json file to text 
 #--------------------------------------------
+'''
 def txtJson(file, key):
     jsonObj = open(file, "r")
     json_list = json.loads(jsonObj.read())
