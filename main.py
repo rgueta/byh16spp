@@ -672,12 +672,13 @@ def sendCodeToVisitor(code, visitorSim):
 # region --------  events --------------------------------
 
 def uploadEvents():
+    global coreId
     eve = open('events.json')
     events = json.loads(eve.read())
     eve.close()
    
     if len(events['events']) > 0:
-        url = config['sim']['url'] + config['sim']['api_coreEvents']
+        url = config['sim']['url'] + config['sim']['api_coreEvents'] + '/' + coreId
         jsonLen = len(str(events['events']).encode('utf-8'))
 
         postData(1, events['events'], jsonLen, url)
