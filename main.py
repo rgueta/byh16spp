@@ -410,14 +410,7 @@ def postData(type = 1, data = any,lenght = 0, url = ''):
         gsm.write('AT+SAPBR=0,1\r')
         utime.sleep(4)
 
-        # clear events -----------------------------
-        jsonTools.updJson('d','events.json','events','', '')
-
-        eve = open('events.json')
-        events = json.loads(eve.read())
-        eve.close()
-
-        print('after cleared len events: ', len(events['events']))
+       
 
     except OSError:  # Open failed
         print('Error--> ', OSError)
@@ -665,6 +658,22 @@ def reg_code_event(code_id):
     postData(1, data, jsonLen, url)
 
 
+def uploadRestraint():
+    global coreId
+    res = open('restraint.json')
+    restraint = json.loads(res.read())
+    res.close()
+   
+    if len(restraint['user']) > 0:
+        url = config['sim']['url'] + config['sim']['api_restraint'] + '/' + coreId
+        jsonLen = len(str(restraint['user']).encode('utf-8'))
+
+        postData(1, restraint['user'], jsonLen, url)
+   
+    else:
+        if debugging:
+            print('No restraint')
+            showMsg('No restraint')
 
 def reg_local_event(pkg):
     jsonTools.updJson('c','events.json','events','', pkg)
@@ -695,6 +704,18 @@ def uploadEvents():
         jsonLen = len(str(events['events']).encode('utf-8'))
 
         postData(1, events['events'], jsonLen, url)
+
+         # clear events -----------------------------
+        jsonTools.updJson('d','events.json','events','', '')
+
+        eve = open('events.json')
+        events = json.loads(eve.read())
+        eve.close()
+
+        if debugging:
+            print('after cleared lenght events: ', len(events['events']))
+        
+        del events
    
     else:
         if debugging:
@@ -703,6 +724,9 @@ def uploadEvents():
 
 # endregion --------  events --------------------------------
 
+# region restraint --------------------------------------------
+
+# endregion --------------------------------------------------
 
 # region ------ Timers  -----------------------------------
 
@@ -1201,6 +1225,10 @@ def simResponse(timer):
                         return
                     elif msg[0] == 'uploadEvents':
                         uploadEvents()
+                        return
+                    
+                    elif msg[0] == 'uploadRestraint':
+                        uploadRestraint()
                         return
 
                     elif msg[0] == 'rst':
