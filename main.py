@@ -422,6 +422,19 @@ def postData(type = 1, data = any,lenght = 0, url = ''):
     except OSError:  # Open failed
         print('Error--> ', OSError)
 
+def correctTime(timestamp):
+    OkTime = False
+    if(len(timestamp) > 0):
+        now = utime.time()
+        tspkg = 0
+        tspkg = int(timestamp[3][:10])
+        diff = now - tspkg
+                
+        if (diff < 90 and diff > 0):
+            OkTime = True
+    
+    return OkTime
+
 
 def updTimestamp():
     gsm.write('AT+CCLK?\r')
@@ -984,6 +997,7 @@ def simResponse(timer):
     global i2c1
     global rotate_display
     global sendCodeEvents
+    global coreId
 
     msg = ''
     # try:
@@ -1086,44 +1100,33 @@ def simResponse(timer):
             # receiving codes ------------------
             if msg[0].strip() == 'codigo':
                 if len(msg) > 5:
-                    msg[3] = msg[3].rstrip('\r\n')
                     msg[4] = msg[4].rstrip('\r\n')
-                    api_data = {"userId": msg[3], "date": msg[2],
-                                "code": msg[1], "visitorSim": msg[4],
-                                "codeId": msg[5]}
+                    msg[5] = msg[5].rstrip('\r\n')
+                    api_data = {"userId": msg[4], "date": msg[3],
+                                "code": msg[2], "visitorSim": msg[5],
+                                "codeId": msg[6]}
                     jsonTools.updJson('c', 'codes.json','codes', '', api_data)
                     cleanCodes(1, '')
                     ShowMainFrame()
                     return
             
             elif msg[0].strip() == 'open':
-                if len(msg) > 3: 
-                    now = utime.time()
-                    tspkg = 0
-                    tspkg = int(msg[3][:10])
-                    diff = now - tspkg
-                            
-                    if diff < 90 and diff > 0:
-                        if debugging:
-                            print('Abriendo ', msg)
-                    
-                        if 'peatonal' in msg[1]:
-                            magnet.Activate()
-                            
-                        elif 'vehicular' in msg[1]:
-                            gate.Activate()
+                if (correctTime(msg[1])):
+                    if debugging:
+                        print('Abriendo ', msg)
+                
+                    if 'peatonal' in msg[2]:
+                        magnet.Activate()
+                        
+                    elif 'vehicular' in msg[2]:
+                        gate.Activate()
 
-                        reg_local_event({'door':msg[1],'phone': senderSim,'phoneId': msg[2], 'date': toHumanDate(1,utime.gmtime(int(msg[3][:10])))})
-                        return
-                    else:
-                        if debugging:
-                            print('out of time')
-                            showMsg('out of time')
+                    reg_local_event({'door':msg[2],'phone': senderSim,'phoneId': msg[3], 'date': toHumanDate(1,utime.gmtime(int(msg[1][:10])))})
+                    return
                 else:
                     if debugging:
-                        print('no timestamp')
-                        showMsg('no timestamp')
-
+                        print('out of time')
+                        showMsg('out of time')
             
         # region admin or neighborAdmin commands section -------------------------------------
             
@@ -1172,18 +1175,20 @@ def simResponse(timer):
 
         #region super admin ------------------------------------------
             if isAdmin(senderSim):
+
                 if msg[0] == 'status':
-                    if msg[1] == 'gral':
+                    if msg[2] == 'gral':
                         sendStatus = True
                         signal_Status('Status')
 
-                    elif msg[1] == 'restraint':
+                    elif msg[2] == 'restraint':
                         txtJson('restraint.json','user')
-                    elif msg[1] == 'getConfig':
+                    elif msg[2] == 'getConfig':
                         gsm_status = []
+                        gsm_status.append({jsonTools.showData('config.json','app','coreId')})
                         gsm_status.append({jsonTools.showData('config.json','app','admin_sim')})
                         gsm_status.append({jsonTools.showData('config.json','app','demo')})
-                        gsm_status.append({jsonTools.showData('config.json','app','OpenByCode')})
+                        gsm_status.append({jsonTools.showData('config.json','app','openByCode')})
                         gsm_status.append({jsonTools.showData('config.json','app','settingsCode')})
                         gsm_status.append({jsonTools.showData('config.json','app','pwdRST')})
                         gsm_status.append({jsonTools.showData('config.json','sim','value')})
@@ -1191,14 +1196,12 @@ def simResponse(timer):
                         gsm_status.append({jsonTools.showData('config.json','sim','api_codes_events')})
                         gsm_status.append({jsonTools.showData('config.json','sim','sendCodeEvents')})
                         sendSMS(str(gsm_status))
-
-
-                    elif msg[1] == 'extrange':
+                    elif msg[2] == 'extrange':
                         txtJson('extrange.json','events')
                     return
                 elif msg[0] == 'query':
-                    sendSMS(jsonTools.showData(msg[1], msg[2], msg[3]))
-
+                    sendSMS(jsonTools.showData(msg[2], msg[3], msg[4]))
+                    return
                 elif msg[0] == 'uploadEvents':
                     uploadEvents()
                     return
@@ -1209,46 +1212,49 @@ def simResponse(timer):
 
                 elif msg[0] == 'cfgCHG':
                     oled1.fill(0)
-                    oled1.text(msg[2] + ' =', 2, 1)
-                    oled1.text(msg[3], 2, 14)
+                    oled1.text(msg[3] + ' =', 2, 1)
+                    oled1.text(msg[4], 2, 14)
                     oled1.show()
                     utime.sleep(4)
                     
-                    if(msg[3] == 'false' or msg[3] == 'true'):
-                        msg[3] = str_to_bool(msg[3])
+                    if(msg[4] == 'false' or msg[4] == 'true'):
+                        msg[4] = str_to_bool(msg[4])
                                 
-                    jsonTools.updJson('u','config.json',msg[1], msg[2], msg[3])
+                    jsonTools.updJson('u','config.json',msg[2], msg[3], msg[4])
                         
-                    if msg[2] == 'openByCode':
+                    if msg[3] == 'openByCode':
                         openByCode = msg[3]
 
-                    if msg[2] == 'demo':
-                        demo = msg[3]
+                    if msg[3] == 'demo':
+                        demo = msg[4]
 
-                    if msg[2] == 'rotate':
-                        rotate_display = msg[3]
+                    if msg[3] == 'rotate':
+                        rotate_display = msg[4]
                         i2c1 = I2C(1, scl=Pin(scl1), sda=Pin(sda1), freq=400000)
                         oled1 = SSD1306_I2C(WIDTH, HEIGHT, i2c1)
-                        oled1.rotate(2)
+                        oled1.rotate(3)
                     
-                    if msg[2] == 'debugging':
-                        debugging = msg[3]
+                    if msg[3] == 'debugging':
+                        debugging = msg[4]
                         if debugging:
                             tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
                         else:
                             tim25.deinit()
 
-                    if msg[1] == 'keypad_matrix':
-                            MATRIX = config[msg[1]][msg[3]]
+                    if msg[2] == 'keypad_matrix':
+                            MATRIX = config[msg[2]][msg[4]]
 
-                    if msg[2] == 'settingsCode':
-                        _settingsCode = msg[3]
+                    if msg[3] == 'settingsCode':
+                        _settingsCode = msg[4]
                     
-                    if msg[2] == 'pwdRST':
-                        pwdRST = msg[3]
+                    if msg[3] == 'pwdRST':
+                        pwdRST = msg[4]
 
-                    if msg[2] == 'sendCodeEvents':
-                        sendCodeEvents = msg[3]
+                    if msg[3] == 'sendCodeEvents':
+                        sendCodeEvents = msg[4]
+
+                    if msg[3] == 'coreId':
+                        coreId = msg[4]
 
                     ShowMainFrame()
                     return    
@@ -1275,11 +1281,12 @@ def simResponse(timer):
  
             if sendStatus:
                 sendStatus = False
-                gsm_status.append({'Local': getLocalTimestamp()})
+                gsm_status.append({'coreId': coreId})
+                gsm_status.append({'Local': toHumanDate(1,d.datetime())})
                 gsm_status.append({'CBC': response_return})
                 pcbTemp = getBoardTemp()
                 gsm_status.append({'Temp': pcbTemp})
-                gsm_status.append({'RTC': d.datetime()})
+                # gsm_status.append({'RTC': d.datetime()})
 
                 #  --- send status  -------
                 sendSMS(str(gsm_status) + '\n Codes: ' + pkgListCodes()

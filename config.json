@@ -2,7 +2,7 @@
 	"app": {
 		"version": "1.0.8",
 		">>> Comment": "branch codes_setting",
-		"coreId": "60afd3955d8280dc19460c3a",
+		"coreId": "60afd3955d8280dc19460c3a00",
 		"door_open_countdown": 10,
 		"pedestrian_alert_msg": "Puerta peatonal abierta !",
 		"logo_timer": 10,
@@ -40,7 +40,7 @@
 		"HTTPACTION_waitTime": 6,
 		"battery_status_line": 2,
 		"api_get_line": 5,
-		"sendCodeEvents": true,
+		"sendCodeEvents": false,
 		"incoming_calls": false
 	},
 	"backup_lines": {
