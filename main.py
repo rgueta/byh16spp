@@ -1171,7 +1171,7 @@ def simResponse(timer):
                         return
                     
                     elif msg[0].strip() == 'delete':
-                        jsonTools.updJson('delete','restraint.json','user','id',msg[2],
+                        jsonTools.updJson('d','restraint.json','user','id',msg[2],
                                         False,'',getLocalTimestamp())
                         updRestraintList()
                         return
