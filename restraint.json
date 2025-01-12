@@ -14,17 +14,7 @@
             "id": "60c53a453371034c5ac6637c",
             "house": "14",
             "name": "Ricardo Gueta",
- 
-            "role": "admin",
-            "status": "unlock",
-            "lockedAt": "24-04-23T18:22:19",
-            "updatedAt": "24-11-28T07:06:47"
-        },
-        {
-            "id": "60c53a453371034c5ac6637c",
-            "house": "14",
-            "name": "Ricardo Gueta",
-            "sim": "664175218200",
+            "sim": "6641752182",
             "role": "admin",
             "status": "unlock",
             "lockedAt": "24-04-23T18:22:19",
@@ -49,6 +39,15 @@
             "sim": "+526643312775",
             "role": "neighbor",
             "updatedAt": "24-05-16T08:36:36"
-        }
+        },
+        {
+            "id": "6783612e469ea91c0e53f796",
+            "house": "3",
+            "name": "Luis",
+            "lockedAt": "25-01-11T17:48:00",
+            "sim": "6641752182",
+            "status": "unlock",
+            "role": "neighbor"
+          }
     ]
 }

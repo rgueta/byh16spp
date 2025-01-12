@@ -1153,10 +1153,16 @@ def simResponse(timer):
                 
                 if isAnyAdmin(senderSim):
                     if msg[0].strip() == 'newUser':
-                        api_data = { "name": msg[2], "house": msg[3], "sim": msg[4],
-                                        "status": "unlock","id": msg[5],"role": msg[6],
-                                        "lockedAt": getLocalTimestamp()}
-                        jsonTools.updJson('c', 'restraint.json','user', '',api_data, '')
+                        if not jsonTools.updJson('r', 'restraint.json','user', 'sim', msg[4], False):
+                            api_data = { "name": msg[2], "house": msg[3], "sim": msg[4],
+                                            "status": "unlock","id": msg[5],"role": msg[6],
+                                            "lockedAt": getLocalTimestamp()}
+                            jsonTools.updJson('c', 'restraint.json','user', '',api_data, '')
+                        else:
+                            if(debugging):
+                                print('Ya existe usuario')
+                                showMsg('Ya existe usuario')
+
                         return
                     
                     elif msg[0].strip() == 'updSim':
