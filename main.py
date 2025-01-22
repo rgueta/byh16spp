@@ -658,6 +658,24 @@ def reg_code_event(code_id):
     postData(1, data, jsonLen, url)
 
 
+
+
+def reg_local_event(pkg):
+    jsonTools.updJson('c','events.json','events','', pkg)
+
+
+def sendCodeToVisitor(code, visitorSim):
+    #  --- send status  -------
+    gsm.write('AT+CMGS="' + str(visitorSim, encoding) + '"\r')
+    utime.sleep(0.5)
+    gsm.write('Codigo de acceso: ' + code + "\r")
+    utime.sleep(0.5)
+    gsm.write(chr(26))
+    utime.sleep(0.5)
+
+# endregion --------  codes --------------------------------
+
+# region current status --------------------------------------------
 def uploadCurrentStatus(info):
     global coreId
     data = any
@@ -686,49 +704,39 @@ def uploadCurrentStatus(info):
         data = json.loads(res.read())
         res.close()
 
+    elif info == 'extrange':
+        key = 'events'
+        url = url + 'extrange/' + coreId
+        res = open('extrange.json')
+        data = json.loads(res.read())
+        res.close()
+
     if len(data[key])> 0:
         jsonLen = len(str(data[key]).encode('utf-8'))
         postData(1, data[key], jsonLen, url)
 
-        if info == 'events':
+        if info == 'events' or info == 'extrange':
+            file = info + '.json'
              # clear events -----------------------------
-            jsonTools.updJson('d','events.json','events','', '')
+            jsonTools.updJson('d',file,'events','', '')
 
-            eve = open('events.json')
+            eve = open(file)
             events = json.loads(eve.read())
-            eve.close()
 
-            if debugging:
-                print('after cleared lenght events: ', len(events['events']))
-            
+            if info == 'events':
+                if debugging:
+                    print('after cleared lenght events: ', len(events['events']))
+            elif info == 'extrange':
+                if debugging:
+                    print('after cleared lenght extrange: ', len(events['events']))
+
+            eve.close()
             del events
     else:
         if debugging:
             print('No ' + info)
             showMsg('No ' + info)
     
-
-    
-   
-   
-
-def reg_local_event(pkg):
-    jsonTools.updJson('c','events.json','events','', pkg)
-
-
-def sendCodeToVisitor(code, visitorSim):
-    #  --- send status  -------
-    gsm.write('AT+CMGS="' + str(visitorSim, encoding) + '"\r')
-    utime.sleep(0.5)
-    gsm.write('Codigo de acceso: ' + code + "\r")
-    utime.sleep(0.5)
-    gsm.write(chr(26))
-    utime.sleep(0.5)
-
-# endregion --------  codes --------------------------------
-
-# region restraint --------------------------------------------
-
 # endregion --------------------------------------------------
 
 # region ------ Timers  -----------------------------------
@@ -1242,6 +1250,10 @@ def simResponse(timer):
                     
                     elif msg[0] == 'uploadCodes':
                         uploadCurrentStatus('codes')
+                        return
+                    
+                    elif msg[0] == 'uploadExtrange':
+                        uploadCurrentStatus('extrange')
                         return
 
                     elif msg[0] == 'rst':
