@@ -658,22 +658,60 @@ def reg_code_event(code_id):
     postData(1, data, jsonLen, url)
 
 
-def uploadRestraint():
+def uploadCurrentStatus(info):
     global coreId
-    res = open('restraint.json')
-    restraint = json.loads(res.read())
-    res.close()
-   
-    if len(restraint['user']) > 0:
-        url = config['sim']['url'] + config['sim']['api_restraint'] + '/' + coreId
-        jsonLen = len(str(restraint['user']).encode('utf-8'))
+    data = any
+    jsonLen = 0
+    url = config['sim']['url'] + config['sim']['api_currentStatus'] + '/'
+    key = ''
 
-        postData(1, restraint['user'], jsonLen, url)
-   
+    match info:
+        case 'restraint':
+            key = 'user'
+            url = url + 'restraint/' + coreId
+            res = open('restraint.json')
+            data = json.loads(res.read())
+            res.close()
+
+        case 'codes':
+            key = 'codes'
+            url = url + 'codes/' + coreId
+            res = open('codes.json')
+            data = json.loads(res.read())
+            res.close()
+
+        case 'events':
+            key = 'events'
+            url = url + 'events/' + coreId
+            res = open('events.json')
+            data = json.loads(res.read())
+            res.close()
+
+    if len(data[key])> 0:
+        jsonLen = len(str(data[key]).encode('utf-8'))
+        postData(1, data[key], jsonLen, url)
+
+        if info == 'events':
+             # clear events -----------------------------
+            jsonTools.updJson('d','events.json','events','', '')
+
+            eve = open('events.json')
+            events = json.loads(eve.read())
+            eve.close()
+
+            if debugging:
+                print('after cleared lenght events: ', len(events['events']))
+            
+            del events
     else:
         if debugging:
-            print('No restraint')
-            showMsg('No restraint')
+            print('No ' + info)
+            showMsg('No ' + info)
+    
+
+    
+   
+   
 
 def reg_local_event(pkg):
     jsonTools.updJson('c','events.json','events','', pkg)
@@ -689,40 +727,6 @@ def sendCodeToVisitor(code, visitorSim):
     utime.sleep(0.5)
 
 # endregion --------  codes --------------------------------
-
-
-# region --------  events --------------------------------
-
-def uploadEvents():
-    global coreId
-    eve = open('events.json')
-    events = json.loads(eve.read())
-    eve.close()
-   
-    if len(events['events']) > 0:
-        url = config['sim']['url'] + config['sim']['api_coreEvents'] + '/' + coreId
-        jsonLen = len(str(events['events']).encode('utf-8'))
-
-        postData(1, events['events'], jsonLen, url)
-
-         # clear events -----------------------------
-        jsonTools.updJson('d','events.json','events','', '')
-
-        eve = open('events.json')
-        events = json.loads(eve.read())
-        eve.close()
-
-        if debugging:
-            print('after cleared lenght events: ', len(events['events']))
-        
-        del events
-   
-    else:
-        if debugging:
-            print('No events')
-            showMsg('No events')
-
-# endregion --------  events --------------------------------
 
 # region restraint --------------------------------------------
 
@@ -1230,11 +1234,15 @@ def simResponse(timer):
                         sendSMS(jsonTools.showData(msg[2], msg[3], msg[4]))
                         return
                     elif msg[0] == 'uploadEvents':
-                        uploadEvents()
+                        uploadCurrentStatus('events')
                         return
                     
                     elif msg[0] == 'uploadRestraint':
-                        uploadRestraint()
+                        uploadCurrentStatus('restraint')
+                        return
+                    
+                    elif msg[0] == 'uploadCodes':
+                        uploadCurrentStatus('codes')
                         return
 
                     elif msg[0] == 'rst':

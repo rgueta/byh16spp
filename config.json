@@ -34,7 +34,7 @@
 		"api_alerts": "api/alerts/",
 		"api_codes_events": "api/codeEvent/new",
 		"api_coreEvents": "api/coreEvents/new",
-		"api_restraint": "api/restraint/new",
+		"api_currentStatus": "api/currentStatus/new",
 		"serial_port": "/dev/ttyAMA0",
 		"serial_baud": 115200,
 		"serial_timeout": 0.1,
