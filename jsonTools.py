@@ -58,7 +58,7 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                             print('Item deleting --> ', file_list[item])
                         del file_list[item]
                         f = open(file,"w")
-                        if file == 'events.json':
+                        if file == 'events.json' or file == 'extrange.json':
                             file_list = {"events" : []}
 
                         json.dump(file_list, f)

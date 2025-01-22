@@ -1255,7 +1255,19 @@ def simResponse(timer):
                     elif msg[0] == 'uploadExtrange':
                         uploadCurrentStatus('extrange')
                         return
+                    
+                    elif msg[0] == 'blockExtrange':
+                        if not jsonTools.updJson('r', 'restraint.json','user', 'sim', msg[3], False):
+                            api_data = { "name": msg[2], "house": "NA", "sim": msg[3],
+                                            "status": "lock","id": msg[4],"role": 'extrange',
+                                            "lockedAt": getLocalTimestamp()}
+                            jsonTools.updJson('c', 'restraint.json','user', '',api_data, '')
+                        else:
+                            if(debugging):
+                                print('Ya existe extrange')
+                                showMsg('Ya existe extrange')
 
+                        return
                     elif msg[0] == 'rst':
                         softReset()
                         return
