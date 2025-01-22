@@ -665,27 +665,26 @@ def uploadCurrentStatus(info):
     url = config['sim']['url'] + config['sim']['api_currentStatus'] + '/'
     key = ''
 
-    match info:
-        case 'restraint':
-            key = 'user'
-            url = url + 'restraint/' + coreId
-            res = open('restraint.json')
-            data = json.loads(res.read())
-            res.close()
+    if info == 'restraint':
+        key = 'user'
+        url = url + 'restraint/' + coreId
+        res = open('restraint.json')
+        data = json.loads(res.read())
+        res.close()
 
-        case 'codes':
-            key = 'codes'
-            url = url + 'codes/' + coreId
-            res = open('codes.json')
-            data = json.loads(res.read())
-            res.close()
+    elif info == 'codes':
+        key = 'codes'
+        url = url + 'codes/' + coreId
+        res = open('codes.json')
+        data = json.loads(res.read())
+        res.close()
 
-        case 'events':
-            key = 'events'
-            url = url + 'events/' + coreId
-            res = open('events.json')
-            data = json.loads(res.read())
-            res.close()
+    elif info == 'events':
+        key = 'events'
+        url = url + 'events/' + coreId
+        res = open('events.json')
+        data = json.loads(res.read())
+        res.close()
 
     if len(data[key])> 0:
         jsonLen = len(str(data[key]).encode('utf-8'))
