@@ -1,6 +1,6 @@
 {
 	"app": {
-		"version": "1.0.8",
+		"version": "1.0.9",
 		">>> Comment": "branch codes_setting",
 		"coreId": "60afd3955d8280dc19460c3a",
 		"door_open_countdown": 10,
@@ -133,6 +133,11 @@
 			]
 		],
 		"default": "flex"
+	},
+	"nfc":{
+		"serial_baud": 9600,
+		"nfc_TX": 4,
+		"nfc_RX": 5
 	},
 	"pi_pins": {
 		"gsm_TX": 0,

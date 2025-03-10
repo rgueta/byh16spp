@@ -111,6 +111,13 @@ encoding = 'utf-8'
 # gsm = UART(0, 9600, tx=Pin(gsm_tx), rx=Pin(gsm_rx), rxbuf=512)
 gsm = UART(0, gsm_baud, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
 
+# ------------------ Setup NFC -----------------------
+nfc_baud = config['nfc']['serial_baud']
+nfc_tx = config['nfc']['nfc_TX']
+nfc_rx = config['nfc']['nfc_RX']
+nfc = UART(1, nfc_baud, tx=Pin(nfc_tx), rx=Pin(nfc_rx))
+lastTag = 0
+
 # Setup codes json file
 code_list = {}
 
@@ -1404,6 +1411,22 @@ def simResponse(timer):
     if not debugging: 
         led25.value(0)
 
+
+def tagResponse(timer):
+    global lastTag
+    if nfc.any():
+        try:
+            ID = ''
+            readByte = nfc.read()
+            pass
+            decoded = int(readByte[3:11].decode('utf-8'),16)
+            if lastTag != decoded:
+                lastTag = decoded
+                print('Tad Id: ', decoded)
+            
+
+        except ValueError as identifier:
+            print('Can not read: ', identifier)
 # endregion ------ Timers  -----------------------------------
 
 
@@ -1695,14 +1718,18 @@ try:
         # Initialize timer used for sim800L
         timerSim800L = Timer()
 
+        # Initialize timer used RDM6300
+        timerRDM6300= Timer()
+
         # Activate blink led
         if debugging:
             tim25.init(freq=2, mode=Timer.PERIODIC, callback=tick25)
 
         timerSim800L.init(freq=2, mode=Timer.PERIODIC, callback=simResponse)
-        # _thread.start_new_thread(simResponse, ())
 
         timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
+
+        timerRDM6300.init(freq=2, mode=Timer.PERIODIC, callback=tagResponse)
 
         # ------ Timestamp section   ---------------------
         rtc = RTC()
