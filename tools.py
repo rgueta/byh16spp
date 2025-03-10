@@ -55,5 +55,18 @@ def gpio(gpio_num, value):
     gpio.value(value)
 
 
-Check_i2c()
+def append_line_to_file(file_path, lines_to_append):
+    try:
+        with open(file_path, 'a') as file:
+            file.write(lines_to_append + '\n')
+    except Exception as e:
+        print("Error: ",  {e})
+
+
+
+# Check_i2c()
 # gpio(26,0)
+
+
+if __name__ == "__main__" :
+     print("Running tools.py locally")

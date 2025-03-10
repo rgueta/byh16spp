@@ -10,6 +10,8 @@ import initSetup
 import jsonTools
 import math
 
+import tools
+
 
 # region Memory status  ----------------------
 
@@ -1041,8 +1043,10 @@ def simResponse(timer):
         response = str(gsm.readline(), encoding).rstrip('\r\n') # type: ignore
         header = response.split(',')
         
+        utime.sleep(0.5)
         if debugging:
             print(response)
+            # tools.append_line_to_file('log.txt', 'response: ' + response + "      " + getLocalTimestamp())
             
         if 'ERROR' in response:
             print('simResponse,Error detected: ' + response)
@@ -1086,8 +1090,11 @@ def simResponse(timer):
         # SMS----------------------
         elif '+CMT:' in response:
             senderSim = header[0][header[0].index('"') + 1: -1]
+
+            utime.sleep(0.5)
             if debugging:
                 print('senderSim: ', senderSim)
+                # tools.append_line_to_file('log.txt', 'senderSim: ' + senderSim + "      " + getLocalTimestamp())
             if(len(senderSim) >= 10):
                 senderSim = senderSim[-10:]
 
@@ -1106,17 +1113,23 @@ def simResponse(timer):
                 #  --- send extrage info to admin  -------
                 sendSMS('Extrange sim: ' + senderSim + ' \n,cmd: ' + response
                          + '\n, at: ' + timestamp )
+                
+                utime.sleep(0.5)
                 if debugging:
                     print('Extrange attempted')
+                    # tools.append_line_to_file('log.txt', 'Extrange attempted: ' + senderSim + "      " + getLocalTimestamp())
                     showMsg('Extrange attempted')
                 return
             
             # Check if user is lock  -------------------------------------
             # status = jsonTools.updJson('r', 'restraint.json','sim', senderSim,'',True,'status')
             # if status == 'lock' or status != 'unlock':
+
+            utime.sleep(0.5)
             if isLocked(senderSim):
                 if debugging:
                     print('User locked')
+                    # tools.append_line_to_file('log.txt', 'User locked: ' + senderSim + "      " + getLocalTimestamp())
                     showMsg('User locked')
                 return
 
@@ -1128,8 +1141,10 @@ def simResponse(timer):
             else:
                 msg = response.split(",")
 
+            utime.sleep(0.5)
             if debugging:
                 print('GSM response: ' + response)
+                # tools.append_line_to_file('log.txt', 'GSM response: ' + response + "      " + getLocalTimestamp())
                 print('sender Sim --> ',senderSim)
 
             if (correctTime(msg[1])):
@@ -1147,6 +1162,9 @@ def simResponse(timer):
                         return
                 
                 elif msg[0].strip() == 'open':
+                    # wait time to secure open each event, because before only open each second open sms
+                    utime.sleep(0.5)
+
                     if debugging:
                         print('Abriendo ', msg)
                 
@@ -1320,7 +1338,7 @@ def simResponse(timer):
 
                         ShowMainFrame()
                         return    
-            #endregion super andmin--------------------
+            #endregion super admin--------------------
             else:
                 if debugging:
                     print('out of time')

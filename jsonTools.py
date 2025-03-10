@@ -241,4 +241,4 @@ def getLocalTimestamp():
 
 
 if __name__ == "__main__" :
-    print("Running at tools.py")
+    print("Running jsonTools.py locally")
