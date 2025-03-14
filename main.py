@@ -90,6 +90,7 @@ pwdRST = config['app']['pwdRST']
 settingsMode = False
 settingsCode = ''
 readyToConfig = False
+scanningNFC = ''
 cmdLineTitle= 'Codigo:             '
 code = ''
 screen_saver = 0
@@ -115,6 +116,7 @@ gsm = UART(0, gsm_baud, tx=Pin(gsm_tx), rx=Pin(gsm_rx))
 nfc_baud = config['nfc']['serial_baud']
 nfc_tx = config['nfc']['nfc_TX']
 nfc_rx = config['nfc']['nfc_RX']
+adminBadge = config['app']['AdminBadge']
 nfc = UART(1, nfc_baud, tx=Pin(nfc_tx), rx=Pin(nfc_rx))
 lastTag = 0
 
@@ -228,6 +230,14 @@ def changeSetting(value):
         applied - True
 
     elif value == '21': # Open Gate
+        magnet.Activate()
+        applied - True
+
+     # NFC -----------------------------------------
+    elif value == '22': # Insert tag
+        printHeaderNFC()
+
+    elif value == '23': # Delete tag
         magnet.Activate()
         applied - True
 
@@ -350,6 +360,26 @@ def ShowMainFrame():
     oled1.text("Codigo: ", 1, 22)
     oled1.show()
     screen_saver = 0
+
+
+def printHeaderNFC(tag = None):
+    global scanningNFC
+    oled1.fill(0)
+    oled1.text("* <-", 1, 0)
+    oled1.text(Today[-2:], 45, 0)
+    
+    if scanningNFC == 'add':
+        oled1.text('add nfc', 1, 10)
+    elif scanningNFC == 'delete':
+        oled1.text('delete nfc', 1, 10)
+
+    if tag:
+        oled1.text('tag: ' + str(tag), 1, 22)
+        song('ok')
+        
+
+    oled1.text('# enter', 75, 0)
+    oled1.show()
 
 # endregion  ----------------------
 
@@ -667,8 +697,6 @@ def reg_code_event(code_id):
     postData(1, data, jsonLen, url)
 
 
-
-
 def reg_local_event(pkg):
     jsonTools.updJson('c','events.json','events','', pkg)
 
@@ -754,6 +782,10 @@ def tick25(timer):
     global led25
     led25.toggle()
 
+'''
+Code setting: #00  --> add nfc code
+Code setting: #01  --> delete nfc code
+'''
 def PollKeypad(timer):
     key = None
     global code
@@ -761,6 +793,7 @@ def PollKeypad(timer):
     global settingsMode
     global readyToConfig
     global settingsCode
+    global scanningNFC
     global screen_saver
     for row in range(4):
         for col in range(4):
@@ -790,17 +823,18 @@ def PollKeypad(timer):
                         oled1.text("Pwd: " + code, 1, 22)
                         oled1.show()
                         break
-                    elif len(code) == 0 and settingsMode == True and readyToConfig == True:
+                    elif len(code) == 0 and settingsMode == True and readyToConfig == True and scanningNFC == '':
                         printHeaderSettings()
                         code = code + MATRIX[row][col]
                         oled1.text("Code: " + code, 1, 22)
                         oled1.show()
                         break
-                    elif len(code) == 0 and settingsMode == False:
+                    elif len(code) == 0 and settingsMode == False and scanningNFC == '':
                         code = code + MATRIX[row][col]
                         oled1.text("Codigo: " + code, 1, 22)
                         oled1.show()
                         break
+    # Request settings menu -----------------------------------                
                     elif code[0:1] == '#' and settingsMode == False:
                         if code[1:] == _settingsCode:
                             settingsMode = True
@@ -812,7 +846,8 @@ def PollKeypad(timer):
                             settingsCode = ''
                             code = ''
                             break
-                    elif code[0:1] == '#' and settingsMode == True and readyToConfig == False:
+    # Enter settings menu with # leading char -----------------------------------
+                    elif code[0:1] == '#' and settingsMode == True and readyToConfig == False and scanningNFC == '':
                         if code[1:] == pwdRST :
                             readyToConfig = True
                             oled1.fill(0)
@@ -825,7 +860,6 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
-                                # DisplayMsg('pwd ok',5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -846,7 +880,8 @@ def PollKeypad(timer):
                                 print('pwd error')
                             code = ''
                             break
-                    elif code[0:1] != '#' and settingsMode == True and readyToConfig == True:
+    # Applying setting -----------------------------------
+                    elif code[0:1] != '#' and settingsMode == True and readyToConfig == True and scanningNFC == '':
                         if changeSetting(code):
                             oled1.fill(0)
                             oled1.text('Applying', 1, 10)
@@ -871,9 +906,9 @@ def PollKeypad(timer):
                             oled1.text('Code:   ', 1, 22)
                             oled1.show()
                             code = ''
-
                         break
-                    elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True:
+    # Exit settings menu -----------------------------------
+                    elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True and scanningNFC == '':
                         oled1.fill(0)
                         printHeaderSettings()
                         oled1.text("exit settings", 1, 22)
@@ -887,7 +922,10 @@ def PollKeypad(timer):
                         settingsCode = ''
                         readyToConfig = False
                         settingsMode = False
+                        scanningNFC = ''
                         break
+
+    # Enter settings menu without # leading char  -----------------------------------                
                     elif len(code) > 0 and settingsMode == True and readyToConfig == False:
                         if code == pwdRST:
                             readyToConfig = True
@@ -901,8 +939,6 @@ def PollKeypad(timer):
                             oled1.text("Code:           ", 1, 22)
                             oled1.show()
                             if debugging:
-                                # disable because not working ok
-                                # DisplayMsg('pwd ok', 5)
                                 print('pwd ok')
                             code = ''
                             settingsCode = ''
@@ -924,7 +960,37 @@ def PollKeypad(timer):
                             code = ''
                             break
                     # endregion -------------------------------------
-                    # 
+    # Enter NFC option  ----------------------------------------------
+    # Enter insert tag -----------------------------------------------
+                    elif code[0:1] == '#' and settingsMode == True and readyToConfig == True:
+                        if code[1:] == "00":
+                            scanningNFC = 'add'
+                            printHeaderNFC()
+                            if debugging:
+                                print('add nfc mode 00')
+
+                        elif code[1:] == "01":
+                            scanningNFC = 'delete'
+                            printHeaderNFC()
+                            if debugging:
+                                print('delete nfc mode 01')
+                            code = ''
+                            settingsCode = ''
+                            break
+                        else:
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text("Incorrect code", 1, 22)
+                            oled1.show()
+                            song('fail')
+                            utime.sleep(3)
+                            printHeaderSettings()
+                            oled1.text("Code:         ", 1, 22)
+                            oled1.show()
+                            if debugging:
+                                print('wrong code')
+                            code = ''
+                            break     
                     elif len(code) > 5 and code[0:1] != '#':
                         my_timer = 0
                         cleanCodes(1, '')
@@ -951,13 +1017,14 @@ def PollKeypad(timer):
                     code = code + MATRIX[row][col]
                     code_hide = code_hide + code_hide_mark
                 
-                if settingsMode == True :
+                if settingsMode == True and scanningNFC == '':
                     printHeaderSettings()
                     if readyToConfig == False:
                         oled1.text("Pwd: " + code, 1, 22)
                     else:
                         oled1.text("Code: " + code, 1, 22)
-                else:
+                    oled1.show()
+                elif scanningNFC == '':
                     printHeader()
                     if show_code:
                         oled1.text("Codigo: " + code, 1, 22)
@@ -965,7 +1032,10 @@ def PollKeypad(timer):
                         oled1.text("Codigo: " + code_hide, 1, 22)
                     if (len(active_codes['codes']) > 0) and settingsCode == False:
                         oled1.text(str(len(active_codes['codes']))+'', 1, 9)
-                oled1.show()
+                    oled1.show()
+                elif scanningNFC != '':
+                    printHeaderNFC()
+                
                 last_key_press = MATRIX[row][col]
 
             else:  #Screen saver counter start -----------------------------------
@@ -1414,6 +1484,10 @@ def simResponse(timer):
 
 def tagResponse(timer):
     global lastTag
+    global settingsMode
+    global readyToConfig
+    global scanningNFC
+    global code
     if nfc.any():
         try:
             ID = ''
@@ -1422,6 +1496,25 @@ def tagResponse(timer):
             decoded = int(readByte[3:11].decode('utf-8'),16)
             if lastTag != decoded:
                 lastTag = decoded
+                if code[0:1] == '#' and decoded == adminBadge:
+                    readyToConfig = True
+                    settingsMode = True
+                    oled1.fill(0)
+                    printHeaderSettings()
+                    oled1.text("admin tag: OK         ", 1, 22)
+                    oled1.show()
+                    song('ok')
+                    utime.sleep(3)
+                    printHeaderSettings()
+                    oled1.text("Code:           ", 1, 22)
+                    oled1.show()
+                    if debugging:
+                        print('admin tag ok')
+                    code = ''
+                    settingsCode = ''
+
+                if settingsMode != '' and readyToConfig == True :
+                    printHeaderNFC(decoded)
                 print('Tad Id: ', decoded)
             
 
@@ -1704,11 +1797,14 @@ try:
         led25 = Pin(25, Pin.OUT)
         led25.value(0)
 
+        # region ----------------- Timers  ------------------------
+
         # Initialize timer led blink
         tim25 = Timer()
 
         # Initialize and set all the rows to low
         InitKeypad()
+
         #-------  SETUP GSM device  -------------------
         init_gsm()
 
@@ -1730,6 +1826,9 @@ try:
         timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
 
         timerRDM6300.init(freq=2, mode=Timer.PERIODIC, callback=tagResponse)
+
+        # endregion -------------------------------------
+
 
         # ------ Timestamp section   ---------------------
         rtc = RTC()

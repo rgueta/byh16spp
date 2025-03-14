@@ -22,7 +22,8 @@
 		"openByCode": "gate",
 		">>> Comment, alertate values": "magnet or gate",
 		"settingsCode": "1324",
-		"rotate": true
+		"rotate": true,
+		"AdminBadge": 4892141
 	},
 	"sim": {
 		"value": "+526641942241",
