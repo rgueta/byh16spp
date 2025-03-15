@@ -54,8 +54,18 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                         break
 
                     elif mov == 'd':   # delete
+
+                        #Verifying if file is already empty
+                        if len(file_list[item]) == 0:
+                            if file == "nfc.json":
+                                if debugging:
+                                    print('Initializing nfc.json file')
+                                file_list = {"tags" : []}
+                                break
+
                         if debugging :
                             print('Item deleting --> ', file_list[item])
+
                         del file_list[item]
                         f = open(file,"w")
                         if file == 'events.json' or file == 'extrange.json':
@@ -69,8 +79,8 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                 for j, jitem in enumerate(file_list[item]):
                     # json item is string
                     if type(jitem) is str:
-                       
                         if len(jitem) == len(value):
+                            print('entre is str jsonTools jitem:{}, value: {} '.format(jitem,value))
                             if jitem == value:
                                 found = True
                                 level = 1
@@ -134,9 +144,23 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                                 return True
                         elif mov == 'd':   # delete
                             if level == 1:
-                                if debugging :
-                                    print('Item deleted --> ', file_list[item])
-                                del file_list[item]
+                                 #Verifying if file is already empty
+                                if len(file_list[item]) == 0:
+                                    if file == "nfc.json":
+                                        if debugging:
+                                            print('Initializing nfc.json file')
+                                        file_list = {"tags" : []}
+                                        break
+                                
+                                if (value != ''):
+                                    if debugging :
+                                        print('Item deleted --> ', file_list[item][j])
+                                    del file_list[item][j]
+                                else :
+                                    if debugging :
+                                        print('Item deleted --> ', file_list[item])
+                                    del file_list[item]
+                                    
                                 f = open(file,"w")
                                 json.dump(file_list, f)
                                 f.close()
