@@ -367,11 +367,12 @@ def printHeaderNFC(tag = None):
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
     oled1.text(Today[-2:], 45, 0)
+
     if not tag:
         if scanningNFC == 'add':
-            oled1.text('add nfc', 1, 10)
+            oled1.text('add nfc ' + str(jsonTools.getSize('nfc.json','tags')), 1, 10)
         elif scanningNFC == 'delete':
-            oled1.text('delete nfc', 1, 10)
+            oled1.text('delete nfc ' + str(jsonTools.getSize('nfc.json','tags')), 1, 10)
 
     if tag:
         if scanningNFC == 'add':
@@ -379,6 +380,10 @@ def printHeaderNFC(tag = None):
                 jsonTools.updJson('c','nfc.json','tags','',str(tag))
                 oled1.text('added: ' + str(tag), 1, 22)
                 song('ok')
+                oled1.show()
+                utime.sleep(4)
+                printHeaderNFC()
+                return
             else:
                 if debugging:
                     print(str(tag) + ', already exist')
@@ -386,20 +391,32 @@ def printHeaderNFC(tag = None):
                 oled1.text('Already exists!', 1, 10)
                 oled1.text('tag: ' + str(tag), 1, 22)
                 song('fail')
+                oled1.show()
+                utime.sleep(4)
+                printHeaderNFC()
+                return
         elif scanningNFC == 'delete':
             if jsonTools.updJson('r', 'nfc.json','tags', str(tag), '', True):
                 jsonTools.updJson('d','nfc.json','tags',str(tag))
+                if debugging:
+                    print(str(tag) + ', deleted')
                 oled1.text('deleted !', 1, 10)
                 oled1.text('tag : ' + str(tag), 1, 22)
                 song('ok')
-                if debugging:
-                    print(str(tag) + ', deleted')
+                oled1.show()
+                utime.sleep(4)
+                printHeaderNFC()
+                return
             else:
+                if debugging:
+                    print(str(tag) + ', Not exists')
                 oled1.text('Not exists !', 1, 10)
                 oled1.text('tag : ' + str(tag), 1, 22)
                 song('fail')
-                if debugging:
-                    print(str(tag) + ', Not exists')
+                oled1.show()
+                utime.sleep(4)
+                printHeaderNFC()
+                return
 
     oled1.text('# enter', 75, 0)
     oled1.show()
@@ -480,11 +497,15 @@ def postData(type = 1, data = any,lenght = 0, url = ''):
 def correctTime(timestamp):
     OkTime = False
     if(len(timestamp) > 0):
-        now = utime.time()
+        local =  utime.localtime()
+        print('LOCAL time: ', utime.mktime(local))
+        # now = utime.time()
+        now = utime.mktime(local)
         tspkg = 0
         tspkg = int(timestamp[:10])
         diff = now - tspkg
-                
+        print('tspkg : ', tspkg)
+        print('DIFF time: ', diff)
         if (diff < 90 and diff > 0):
             OkTime = True
     
@@ -771,6 +792,13 @@ def uploadCurrentStatus(info):
         data = json.loads(res.read())
         res.close()
 
+    elif info == 'nfc':
+        key = 'tags'
+        url = url + 'nfc/' + coreId
+        res = open('nfc.json')
+        data = json.loads(res.read())
+        res.close()
+
     if len(data[key])> 0:
         jsonLen = len(str(data[key]).encode('utf-8'))
         postData(1, data[key], jsonLen, url)
@@ -831,6 +859,7 @@ def PollKeypad(timer):
                 key = KEY_UP
             row_pins[row].low()
             if key == KEY_DOWN:
+                lastTag = '' #clean last taf scanned
     # Screen wakeup,screen On  ---------------------------------------
                 screen_saver = 0
                 printHeader()
@@ -840,7 +869,6 @@ def PollKeypad(timer):
                         code_hide = code_hide[0:-1]
     # keypad # verification option ------------------------------------------
                 elif MATRIX[row][col] == '#':
-                    lastTag = '' #clean last taf scanned
             # code settings verification  --------------
                     if len(code) == 0 and settingsMode == True and readyToConfig == False:
                         printHeaderSettings()
@@ -1377,9 +1405,12 @@ def simResponse(timer):
                             gsm_status.append({jsonTools.showData('config.json','sim','api_codes_events')})
                             gsm_status.append({jsonTools.showData('config.json','sim','sendCodeEvents')})
                             sendSMS(str(gsm_status))
+                            
                         elif msg[2] == 'extrange':
                             txtJson('extrange.json','events')
+
                         return
+                        
                     elif msg[0] == 'query':
                         sendSMS(jsonTools.showData(msg[2], msg[3], msg[4]))
                         return
@@ -1397,6 +1428,10 @@ def simResponse(timer):
                     
                     elif msg[0] == 'uploadExtrange':
                         uploadCurrentStatus('extrange')
+                        return
+
+                    elif msg[0] == 'uploadNFC':
+                        uploadCurrentStatus('nfc')
                         return
                     
                     elif msg[0] == 'blockExtrange':

@@ -255,6 +255,17 @@ def showData(file,key,value = '', mov = 'r'):
                     break
 
 
+def getSize(file,key):
+    jsonObj = open(file)
+    file_list = json.loads(jsonObj.read())
+    jsonObj.close()
+    size = len(file_list[key])
+    del file_list
+
+    return size
+
+
+
 def getLocalTimestamp():
     global timestamp
     tsf = ((str(timestamp[0:2]) + '-' + str(timestamp[3:5]) + '-' +
