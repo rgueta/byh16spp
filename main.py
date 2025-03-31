@@ -119,6 +119,7 @@ nfc_rx = config['nfc']['nfc_RX']
 adminBadge = config['app']['AdminBadge']
 nfc = UART(1, nfc_baud, tx=Pin(nfc_tx), rx=Pin(nfc_rx))
 lastTag = 0
+nfcHouse = ''
 
 # Setup codes json file
 code_list = {}
@@ -188,7 +189,7 @@ def changeSetting(value):
     if value == '00': # reboot
         oled1.fill(0)
         printHeaderSettings()
-        oled1.text('Booting.. ', 1, 22)
+        oled1.text('Booting.. ', 1, 24)
         oled1.show()
         utime.sleep(3)
         softReset()
@@ -230,14 +231,6 @@ def changeSetting(value):
         applied - True
 
     elif value == '21': # Open Gate
-        magnet.Activate()
-        applied - True
-
-     # NFC -----------------------------------------
-    elif value == '22': # Insert tag
-        printHeaderNFC()
-
-    elif value == '23': # Delete tag
         magnet.Activate()
         applied - True
 
@@ -357,28 +350,104 @@ def ShowMainFrame():
     oled1.text('# enter', 75, 0)
     if len(active_codes['codes']) > 0:
         oled1.text(str(len(active_codes['codes']))+'', 1, 9)
-    oled1.text("Codigo: ", 1, 22)
+    oled1.text("Codigo: ", 1, 24)
     oled1.show()
     screen_saver = 0
 
 
 def printHeaderNFC(tag = None):
     global scanningNFC
+    global nfcHouse
+    global screen_saver
+
+    screen_saver = 0
     oled1.fill(0)
     oled1.text("* <-", 1, 0)
-    oled1.text(Today[-2:], 45, 0)
+    oled1.text('# enter', 75, 0)
+    oled1.text('NFC', 45, 0)
 
     if not tag:
         if scanningNFC == 'add':
-            oled1.text('add nfc ' + str(jsonTools.getSize('nfc.json','tags')), 1, 10)
+            if nfcHouse != '':
+                oled1.text('+ [' + 
+                           str(jsonTools.getSize('nfc.json','house', nfcHouse)) + 
+                           '],en Casa:' + nfcHouse, 1, 10)
+            else:
+                oled1.text(' falta # casa',  1, 24)
+                song('fail')
+                oled1.show()
+                utime.sleep(5)
+                printHeaderSettings()
+                oled1.show()
+                
+                return
         elif scanningNFC == 'delete':
-            oled1.text('delete nfc ' + str(jsonTools.getSize('nfc.json','tags')), 1, 10)
+            oled1.fill(0)
+            if nfcHouse == '':
+                oled1.text(' borrar total: ' + 
+                           str(jsonTools.getSize('nfc.json','house')), 1, 10)
+            else:
+                oled1.text('borrar total:' +
+                           str(jsonTools.getSize('nfc.json','house',nfcHouse)), 1, 10)
+                oled1.text('en casa: ' + nfcHouse, 1, 24)
+                
+                oled1.text('1.- Si', 1, 0)
+                oled1.text('2.- No', 75, 0)
+                oled1.show()
+                return
+
+        elif scanningNFC == 'find':
+            if nfcHouse != '':   #find tag by house
+                tags = jsonTools.updJson('r', 'nfc.json','house', nfcHouse, '' ,True)
+
+                if tags :
+                    tagCount= len(tags)
+                    if debugging:
+                        print('{} tags from house:{}, {}'.format(len(tags),nfcHouse,tags))
+                    acc = 0
+                    tmp1 = ''
+                    tmp2 = ''
+                    for item in tags:
+                        acc += 1
+                        if acc < 3:
+                            tmp1 = item + ','
+                        else:
+                            tmp2 = item + ','
+
+                    oled1.text('casa '+ nfcHouse + '[' + str(tagCount) + '],' + tmp1, 1, 10)
+                    oled1.text(tmp2, 1, 24)
+                    song('ok')
+                    oled1.show()
+                    utime.sleep(4)
+                    scanningNFC = ''
+                    return
+                
+                else:
+                    if debugging:
+                        print('No tags for house: ',nfcHouse) 
+
+            else:     #find tag in whole json file
+                oled1.text('- busca nfc -',  1, 10)
+                oled1.show()
+                return
+            
+        elif scanningNFC == 'scan':
+            oled1.text('- Leer nfc -',  1, 10)
+            oled1.show()
+            return
+
+        elif scanningNFC == 'show':
+            oled1.text('- show nfc tags -',  1, 10)
+            oled1.text('in terminal', 1, 24)
+            oled1.show()
+            jsonTools.updJson('r', 'nfc.json', 'house')
+            return
 
     if tag:
         if scanningNFC == 'add':
-            if not jsonTools.updJson('r', 'nfc.json','tags', str(tag), '', True):
-                jsonTools.updJson('c','nfc.json','tags','',str(tag))
-                oled1.text('added: ' + str(tag), 1, 22)
+            if not jsonTools.updJson('r', 'nfc.json','house', nfcHouse, str(tag), True):
+                jsonTools.updJson('c','nfc.json','house', nfcHouse, str(tag))
+                oled1.text('added: ' + str(tag), 0, 22)
                 song('ok')
                 oled1.show()
                 utime.sleep(4)
@@ -389,37 +458,77 @@ def printHeaderNFC(tag = None):
                     print(str(tag) + ', already exist')
 
                 oled1.text('Already exists!', 1, 10)
-                oled1.text('tag: ' + str(tag), 1, 22)
+                oled1.text('tag: ' + str(tag), 1, 24)
                 song('fail')
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
                 return
         elif scanningNFC == 'delete':
-            if jsonTools.updJson('r', 'nfc.json','tags', str(tag), '', True):
-                jsonTools.updJson('d','nfc.json','tags',str(tag))
+            if jsonTools.updJson('r', 'nfc.json','house', '', str(tag), True):
+                jsonTools.updJson('d','nfc.json','house', nfcHouse, str(tag))
                 if debugging:
-                    print(str(tag) + ', deleted')
+                    print('tag: ' + str(tag) + ' deleted')
+                    jsonTools.updJson('r', 'nfc.json', 'house')
+
                 oled1.text('deleted !', 1, 10)
-                oled1.text('tag : ' + str(tag), 1, 22)
+                oled1.text('tag : ' + str(tag), 1, 24)
                 song('ok')
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
                 return
+            
             else:
                 if debugging:
                     print(str(tag) + ', Not exists')
                 oled1.text('Not exists !', 1, 10)
-                oled1.text('tag : ' + str(tag), 1, 22)
+                oled1.text('tag : ' + str(tag), 1, 24)
                 song('fail')
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
                 return
+        
+        elif scanningNFC == 'find' and nfcHouse == '':
+            oled1.text('Busca: ' + str(tag),  0, 10)
+            oled1.text('                   ', 1, 24)
+            oled1.show()
+            house = jsonTools.updJson('r', 'nfc.json', 'house', '', str(tag), True )
+            if house :
+                if debugging:
+                    print('Tag: {}, found at house: {}'.format(str(tag),house))
 
-    oled1.text('# enter', 75, 0)
+                oled1.text('es de casa: ' + house, 1, 24)
+                song('ok')
+                oled1.show()
+                return
+            else:
+                if debugging:
+                    print('Tag not found')
+
+                oled1.text('no existe!' , 1, 24)
+                song('ok')
+                oled1.show()
+                return
+        
+        elif scanningNFC == 'scan':
+            if debugging:
+                print('Tag: ',str(tag))
+            oled1.text('- Leer nfc -',  1, 10)
+            oled1.text('Tag : ' + str(tag), 1, 24)
+            song('ok')
+            oled1.show()
+            return
+
+    
     oled1.show()
+
+    #Screen saver counter start -----------------------------------
+    if screen_saver <= 2000:
+        screen_saver += 1
+        if screen_saver == 2000:# ------ Screen Off --------------
+            screenSaver()
 
 # endregion  ----------------------
 
@@ -847,6 +956,7 @@ def PollKeypad(timer):
     global scanningNFC
     global screen_saver
     global lastTag
+    global nfcHouse
     for row in range(4):
         for col in range(4):
             row_pins[row].high()
@@ -862,6 +972,34 @@ def PollKeypad(timer):
                 lastTag = '' #clean last taf scanned
     # Screen wakeup,screen On  ---------------------------------------
                 screen_saver = 0
+    # Response to Condition  1.- Si, 2.- No   --------------------------
+                if settingsMode == True and readyToConfig == True and scanningNFC == 'delete':
+                    if MATRIX[row][col]  == '1': #Si aceptado el borrado
+                        scanningNFC = ''
+                        oled1.fill(0)
+                        if(jsonTools.updJson('d','nfc.json','house', nfcHouse)):
+                            oled1.text('Borrados !', 1, 10)
+                            oled1.text('casa : ' + nfcHouse, 1, 24)
+                            oled1.show()
+                            song('ok')
+                            utime.sleep(4)
+                            if debugging:
+                                print('house: ' + nfcHouse + ' deleted')
+                                print('nfc codes now:')
+                                jsonTools.updJson('r', 'nfc.json', 'house')
+                        else:
+                            oled1.text('No Borrados !', 1, 10)
+                            oled1.text('casa : ' + nfcHouse, 1, 24)
+                            oled1.show()
+                            song('fail')
+                            utime.sleep(4)
+                        printHeaderSettings()
+                        return
+                    elif MATRIX[row][col]  == '2': #No aceptado el borrado
+                        printHeaderSettings()
+                        return
+                    code = ''
+
                 printHeader()
                 if MATRIX[row][col] == '*':
                     if len(code) > 0:
@@ -873,25 +1011,122 @@ def PollKeypad(timer):
                     if len(code) == 0 and settingsMode == True and readyToConfig == False:
                         printHeaderSettings()
                         code = code + MATRIX[row][col]
-                        oled1.text("Pwd: " + code, 1, 22)
+                        oled1.text("Pwd: " + code, 1, 24)
                         oled1.show()
                         break
+            # Exit settings menu -----------------------------------
+                    elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True:
+                        oled1.fill(0)
+                        printHeaderSettings()
+                        oled1.text("exit settings", 1, 24)
+                        oled1.show()
+                        song('ok')
+                        utime.sleep(3)
+                        printHeader()
+                        oled1.text("Codigo:           ", 1, 24)
+                        oled1.show()
+                        code = ''
+                        settingsCode = ''
+                        readyToConfig = False
+                        settingsMode = False
+                        scanningNFC = ''
+                        break
+            # Enter NFC option  ----------------------------------------------
+                    elif code[0:1] == '#' and settingsMode == True and readyToConfig == True:
+                        if code[1:3] == "00":
+                            scanningNFC = 'add'
+                            nfcHouse = code[3:]
+                            code = ''
+                            settingsCode = ''
+                            printHeaderNFC()
+                            if debugging:
+                                print('add nfc mode 00 from house ', nfcHouse)
+                            
+                            break
+                        elif code[1:3] == "01":
+                            scanningNFC = 'delete'
+                            nfcHouse = code[3:]
+                            printHeaderNFC()
+                            if debugging:
+                                print('delete nfc mode 01 from house ', nfcHouse)
+                            code = ''
+                            settingsCode = ''
+                            break
+                        elif code[1:3] == "02":
+                            scanningNFC = 'find'
+                            nfcHouse = code[3:]
+                            code = ''
+                            settingsCode = ''
+                            printHeaderNFC()
+                            if debugging:
+                                print('read nfc mode 02 from house ', nfcHouse)
+                            
+                            break
+
+                        elif code[1:3] == "03":
+                            scanningNFC = 'scan'
+                            nfcHouse = code[3:]
+                            code = ''
+                            settingsCode = ''
+                            printHeaderNFC()
+                            if debugging:
+                                print('read nfc mode 03')
+                            
+                            break
+                        # Show all tags on terminal
+                        elif code[1:3] == "04":
+                            scanningNFC = 'show'
+                            nfcHouse = code[3:]
+                            code = ''
+                            settingsCode = ''
+                            printHeaderNFC()
+                            if debugging:
+                                print('show nfc tags mode 04')
+                            
+                            break
+
+                        # clear nfc tag by house or whole houses
+                        elif code[1:3] == "05":
+                            scanningNFC = 'show'
+                            nfcHouse = code[3:]
+                            code = ''
+                            settingsCode = ''
+                            printHeaderNFC()
+                            if debugging:
+                                print('show nfc tags mode 04')
+                            
+                            break
+
+                        else:
+                            oled1.fill(0)
+                            printHeaderSettings()
+                            oled1.text("Incorrect code", 1, 24)
+                            oled1.show()
+                            song('fail')
+                            utime.sleep(3)
+                            printHeaderSettings()
+                            oled1.text("Code:         ", 1, 24)
+                            oled1.show()
+                            if debugging:
+                                print('wrong code')
+                            code = ''
+                            break 
                     elif len(code) == 0 and settingsMode == True and readyToConfig == True and scanningNFC == '':
                         printHeaderSettings()
                         code = code + MATRIX[row][col]
-                        oled1.text("Code: " + code, 1, 22)
+                        oled1.text("Code: " + code, 1, 24)
                         oled1.show()
                         break
                     elif len(code) == 0 and settingsMode == False :
                         code = code + MATRIX[row][col]
-                        oled1.text("Codigo: " + code, 1, 22)
+                        oled1.text("Codigo: " + code, 1, 24)
                         oled1.show()
                         break
 
         # Change NCF mode-------------------------------------
                     elif len(code) == 0 and settingsMode == True and readyToConfig == True and scanningNFC != '' :
                         code = code + MATRIX[row][col]
-                        oled1.text("Codigo: " + code, 1, 22)
+                        oled1.text("Codigo: " + code, 1, 24)
                         oled1.show()
                         break
     # Request settings menu -----------------------------------                
@@ -901,7 +1136,7 @@ def PollKeypad(timer):
                             song('ok')
                             printHeaderSettings()
                             cmdLineTitle = "Pwd:                  "
-                            oled1.text(cmdLineTitle, 1, 22)
+                            oled1.text(cmdLineTitle, 1, 24)
                             oled1.show()
                             settingsCode = ''
                             code = ''
@@ -912,12 +1147,12 @@ def PollKeypad(timer):
                             readyToConfig = True
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text("Pwd: OK         ", 1, 22)
+                            oled1.text("Pwd: OK         ", 1, 24)
                             oled1.show()
                             song('ok')
                             utime.sleep(3)
                             printHeaderSettings()
-                            oled1.text("Code:           ", 1, 22)
+                            oled1.text("Code:           ", 1, 24)
                             oled1.show()
                             if debugging:
                                 print('pwd ok')
@@ -927,12 +1162,12 @@ def PollKeypad(timer):
                         else:
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text("Pwd: Error         ", 1, 22)
+                            oled1.text("Pwd: Error         ", 1, 24)
                             oled1.show()
                             song('fail')
                             utime.sleep(3)
                             printHeaderSettings()
-                            oled1.text("Pwd:         ", 1, 22)
+                            oled1.text("Pwd:         ", 1, 24)
                             oled1.show()
                             if debugging:
                                 # disable because not working ok
@@ -951,7 +1186,7 @@ def PollKeypad(timer):
                             song('ok')
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text('Code:   ', 1, 22)
+                            oled1.text('Code:   ', 1, 24)
                             oled1.show()
                             code = ''
                         else:
@@ -963,37 +1198,11 @@ def PollKeypad(timer):
                             song('fail')
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text('Code:   ', 1, 22)
+                            oled1.text('Code:   ', 1, 24)
                             oled1.show()
                             code = ''
-                        break
-    
-    # # Change NCF mode-------------------------------------
-    #                 elif code[0:1] == '#' and readyToConfig == True and scanningNFC != '':
-    #                     print('entre changevNFC mode')
-    #                     printHeaderSettings()
-    #                     code = code + MATRIX[row][col]
-    #                     oled1.text("Code: " + code, 1, 22)
-    #                     oled1.show()
-    #                     break
-                        
-    # Exit settings menu -----------------------------------
-                    elif code[0:1] == '#' and code[1:] == _settingsCode and settingsMode == True and readyToConfig == True and scanningNFC != '':
-                        oled1.fill(0)
-                        printHeaderSettings()
-                        oled1.text("exit settings", 1, 22)
-                        oled1.show()
-                        song('ok')
-                        utime.sleep(3)
-                        printHeader()
-                        oled1.text("Codigo:           ", 1, 22)
-                        oled1.show()
-                        code = ''
-                        settingsCode = ''
-                        readyToConfig = False
-                        settingsMode = False
-                        scanningNFC = ''
-                        break
+                        break              
+  
 
     # Enter settings menu without # ( Password ) leading char  -----------------------------------                
                     elif len(code) > 0 and settingsMode == True and readyToConfig == False:
@@ -1001,12 +1210,12 @@ def PollKeypad(timer):
                             readyToConfig = True
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text("Pwd: OK         ", 1, 22)
+                            oled1.text("Pwd: OK         ", 1, 24)
                             oled1.show()
                             song('ok')
                             utime.sleep(3)
                             printHeaderSettings()
-                            oled1.text("Code:           ", 1, 22)
+                            oled1.text("Code:           ", 1, 24)
                             oled1.show()
                             if debugging:
                                 print('pwd ok')
@@ -1016,12 +1225,12 @@ def PollKeypad(timer):
                         else:
                             oled1.fill(0)
                             printHeaderSettings()
-                            oled1.text("Pwd: Error         ", 1, 22)
+                            oled1.text("Pwd: Error         ", 1, 24)
                             oled1.show()
                             song('fail')
                             utime.sleep(3)
                             printHeaderSettings()
-                            oled1.text("Pwd:         ", 1, 22)
+                            oled1.text("Pwd:         ", 1, 24)
                             oled1.show()
                             if debugging:
                                 # disable because not working ok
@@ -1030,36 +1239,7 @@ def PollKeypad(timer):
                             code = ''
                             break
                     
-    # Enter NFC option  ----------------------------------------------
-                    elif code[0:1] == '#' and settingsMode == True and readyToConfig == True :
-                        if code[1:] == "00":
-                            scanningNFC = 'add'
-                            printHeaderNFC()
-                            if debugging:
-                                print('add nfc mode 00')
-
-                        elif code[1:] == "01":
-                            scanningNFC = 'delete'
-                            printHeaderNFC()
-                            if debugging:
-                                print('delete nfc mode 01')
-                            code = ''
-                            settingsCode = ''
-                            break
-                        else:
-                            oled1.fill(0)
-                            printHeaderSettings()
-                            oled1.text("Incorrect code", 1, 22)
-                            oled1.show()
-                            song('fail')
-                            utime.sleep(3)
-                            printHeaderSettings()
-                            oled1.text("Code:         ", 1, 22)
-                            oled1.show()
-                            if debugging:
-                                print('wrong code')
-                            code = ''
-                            break     
+        
                     
     # Enter code to openning ------------------------------------
                     elif len(code) > 5 and code[0:1] != '#':
@@ -1077,9 +1257,9 @@ def PollKeypad(timer):
                         utime.sleep(3)
                         printHeader()
                         if show_code:
-                            oled1.text("Codigo: " + code, 1, 22)
+                            oled1.text("Codigo: " + code, 1, 24)
                         else:
-                            oled1.text("Codigo: " + code_hide, 1, 22)
+                            oled1.text("Codigo: " + code_hide, 1, 24)
                         oled1.show()
                         warning_message_active = True
                         break
@@ -1087,32 +1267,35 @@ def PollKeypad(timer):
                 else:
                     code = code + MATRIX[row][col]
                     code_hide = code_hide + code_hide_mark
-                
+
                 if settingsMode == True and scanningNFC == '':
                     printHeaderSettings()
                     if readyToConfig == False:
-                        oled1.text("Pwd: " + code, 1, 22)
+                        oled1.text("Pwd: " + code, 1, 24)
                     else:
-                        oled1.text("Code: " + code, 1, 22)
+                        oled1.text("Code: " + code, 1, 24)
                     oled1.show()
                 elif scanningNFC == '':
                     printHeader()
                     if show_code:
-                        oled1.text("Codigo: " + code, 1, 22)
+                        oled1.text("Codigo: " + code, 1, 24)
                     else:
-                        oled1.text("Codigo: " + code_hide, 1, 22)
+                        oled1.text("Codigo: " + code_hide, 1, 24)
                     if (len(active_codes['codes']) > 0) and settingsCode == False:
-                        oled1.text(str(len(active_codes['codes']))+'', 1, 9)
+                        oled1.text(str(len(active_codes['codes'])), 1, 9)
                     oled1.show()
+                    
                 if settingsMode == True and scanningNFC != '':
-                    print('entre final scanningNFC code: ', code)
-                    printHeaderNFC()
-                    oled1.text("Codigo: " + code, 1, 22)
+                    # if code[0:1] != '#':
+                    # printHeaderNFC()
+                # else:
+                    oled1.text("Codigo: " + code, 1, 24)
                     oled1.show()
+                    # return
                 
-                
+                print('code.: ', code)
 
-                last_key_press = MATRIX[row][col]
+                # last_key_press = MATRIX[row][col]
 
             else:  #Screen saver counter start -----------------------------------
                 if screen_saver <= 2000:
@@ -1505,10 +1688,7 @@ def simResponse(timer):
                     showMsg('out of time')
 
         elif '+CSQ:' in response:
-            
             pos = response.index(':')
-            print('entre aqui response: ', response)
-
             # global response_return
             response_return = response[pos + 2: (pos + 2) + 2]
             if sendStatus:
@@ -1571,6 +1751,7 @@ def tagResponse(timer):
     global readyToConfig
     global scanningNFC
     global code
+
     if nfc.any():
         try:
             ID = ''
@@ -1588,7 +1769,7 @@ def tagResponse(timer):
                     settingsMode = True
                     song('ok')
                     printHeaderSettings()
-                    oled1.text("Code:           ", 1, 22)
+                    oled1.text("Code:           ", 1, 24)
                     oled1.show()
                     if debugging:
                         print('admin tag ok')
@@ -1601,8 +1782,6 @@ def tagResponse(timer):
                 if settingsMode != '' and readyToConfig == True :
                     printHeaderNFC(decoded)
                 
-                
-            
 
         except ValueError as identifier:
             print('Can not read: ', identifier)
