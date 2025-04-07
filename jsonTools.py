@@ -41,56 +41,59 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
             if mov == 'r':
                 if newValue != '':
                     if value != '' :  #find tag into house
-                        if value in file_list[0][key]: # if house exist 
-                            for t,titem in enumerate(file_list[0][key][value]):
+                        if value in file_list[key]: # if house exist 
+                            for t,titem in enumerate(file_list[key][value]):
                                 if titem == newValue:
                                     return True
                             return False
                         else:
                             return False
                     else:  # find where tag belongs to
-                        for t,titem in enumerate(file_list[0][key]):
-                            for n, nitem in enumerate(file_list[0][key][titem]):
+                        for t,titem in enumerate(file_list[key]):
+                            for n, nitem in enumerate(file_list[key][titem]):
                                 if nitem == newValue:
                                     return titem
                         return ''
                 else:
                     if value != '':
-                        if len(file_list[0][key]) > 0:
-                            for t,titem in enumerate(file_list[0][key]):
+                        if len(file_list[key]) > 0:
+                            for t,titem in enumerate(file_list[key]):
                                 if titem == value:
-                                    return file_list[0][key][titem]
+                                    return file_list[key][titem]
                             return ''
                         else:
                             return ''
                     # get whole tags 
                     else:
-                        if(len(file_list[0][key]) > 0):
-                            for h,hitem in enumerate(file_list[0][key]):
-                                print('Casa {}: {}'.format(hitem,file_list[0][key][hitem]))
+                        if(len(file_list[key]) > 0):
+                            for h,hitem in enumerate(file_list[key]):
+                                print('Casa {}: {}'.format(hitem,file_list[key][hitem]))
             
             elif mov == 'd':
                 deleted = False
                 if value != '':
-                    if len(file_list[0][key][value]) > 0:
+                    if len(file_list[key][value]) > 0:
                         if newValue != '':  # delete single tag
-                            for t,titem in enumerate(file_list[0][key][value]): 
+                            for t,titem in enumerate(file_list[key][value]): 
                                 if titem == newValue:
-                                    del file_list[0][key][value][t]
+                                    del file_list[key][value][t]
                                     deleted = True
                                     break
                         else: # delete whole house
-                            del file_list[0][key][value]
+                            del file_list[key][value]
                             deleted = True
                 else:
-                    for h,hitem in enumerate(file_list[0][key]): 
-                        for t,titem in enumerate(file_list[0][key][hitem]): 
-                            if titem == newValue:
-                                del file_list[0][key][hitem][t]
-                                deleted = True
-                                break
-                        if deleted:
-                            break
+                    if newValue != '': #delete single tag
+                        for h,hitem in enumerate(file_list[key]): 
+                            for t,titem in enumerate(file_list[key][hitem]): 
+                                if titem == newValue:
+                                    del file_list[key][hitem][t]
+                                    deleted = True
+                    else: #cleanup nfc whole houses
+                        for h,hitem in enumerate(file_list[key]): 
+                            del file_list[key][hitem]
+                            deleted = True
+
                 if deleted:
                     f = open(file,"w")
                     json.dump(file_list, f)
@@ -100,20 +103,18 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
             elif mov == 'c':
                 acc = 0
                 if value != '':
-                    if value in file_list[0][key]:
-                        for t,titem in enumerate(file_list[0][key]):
+                    if value in file_list[key]:
+                        for t,titem in enumerate(file_list[key]):
                             if titem == value :
                                 acc = 1
-                                file_list[0][key][value].append(newValue)
+                                file_list[key][value].append(newValue)
                     else:
                         newItem = {value:[]}
-                        file_list[0][key].update(newItem)
-                        file_list[0][key][value] = [newValue]
-                        f = open(file,"w")
-                        json.dump(file_list, f)
-                        f.close()
-                        if newValue != '':
-                            updJson('c','nfc.json','house', value, newValue)
+                        file_list[key].update(newItem)
+                        file_list[key][value] = [newValue]
+                        acc = 1
+                        # if newValue != '':
+                        #     updJson('c','nfc.json','house', value, newValue)
                 if acc == 1:
                     f = open(file,"w")
                     json.dump(file_list, f)
@@ -123,13 +124,7 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                         # showData(file,key,value,mov)
                 return
 # NFC section finish
-        for i,item in enumerate(file_list):
-            # if file == 'restraint.json':
-            #     if len(file_list) > 0 :
-            #         print('last restraint: ', file_list[item][-1])
-            
-            
-                        
+        for i,item in enumerate(file_list):     
             if item == key:
                 # Level one interaction, receiving just key without value
                 if value == '':
@@ -167,10 +162,8 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
 
                 for j, jitem in enumerate(file_list[item]):
                     # json item is string
-                    print('entre is str jsonTools antes -- jitem:{}, value: {} '.format(jitem,value))
                     if type(jitem) is str:
                         if len(jitem) == len(value):
-                            print('entre is str jsonTools jitem:{}, value: {} '.format(jitem,value))
                             if jitem == value:
                                 found = True
                                 level = 1
@@ -187,7 +180,6 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                           # when jitem found as array  -------------------------------------------
                     elif (type(jitem) is not int or type(jitem) is not float or type(jitem) is not str) :
                         if type(jitem[value]) is str:
-                            print('entre jsonTools.updJson,type(jitem[value]) is str: ', jitem[value])
                             if len(jitem[value]) == len(newValue):
                                 if jitem[value] == newValue:
                                     found = True
@@ -203,7 +195,6 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                                             level = 2
 
                     if found:
-                        print('entre jsonTools.updJson YES FOUND')
                         if mov == 'updStatus_lock' or mov == 'updStatus_unlock':
                             if mov == 'updStatus_lock':
                                 status = 'lock'
@@ -225,7 +216,6 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                             wfile.close()
                             break                            
 
-                        # if newValue == '': # not require change value
                         if mov == 'r':   # Read
                             if returnKey:
                                 if level == 1:
@@ -241,7 +231,7 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                                     if file == "nfc.json":
                                         if debugging:
                                             print('Initializing nfc.json file')
-                                        file_list.append = [{"house":{}}]
+                                        file_list.append = {"house":{}}
                                         break
                                 
                                 if (value != ''):
@@ -269,7 +259,6 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                                 break
                         elif mov == 'c':   # create up to one level
                             if level == 1:
-                                print('entre jsonTools mov == c level 1 ')
                                 file_list[item][value].append(newValue)
                                 f = open(file,"w")
                                 json.dump(file_list, f)
@@ -295,7 +284,6 @@ def updJson(mov, file, key, value = '' , newValue = '', wholeWord = True, return
                                     showData(file,key,value,mov)
                                 break
                             if level == 2:
-                                print('file_list[item][value]: ', file_list[item][value] )
                                 file_list[item][value] = newValue
                                 f = open(file,"w")
                                 json.dump(file_list, f)
@@ -363,17 +351,13 @@ def getSize(file,key, value = ''):
     jsonObj.close()
     size = 0
     if value != '':
-        if file == 'nfc.json':
-            if value in file_list[0][key]:
-                size = len(file_list[0][key][value])
-        else:
-            if value in file_list[key]:
-                size = len(file_list[key][value])
+        if value in file_list[key]:
+            size = len(file_list[key][value])
     else:
         if file == 'nfc.json':
-            for x,xitem in enumerate(file_list[0][key]):
-                size += len(file_list[0][key][xitem])
-                print('casa {}, tags = {}'.format(xitem,len(file_list[0][key][xitem])))
+            for x,xitem in enumerate(file_list[key]):
+                size += len(file_list[key][xitem])
+                print('casa {}, tags = {}'.format(xitem,len(file_list[key][xitem])))
         else:
             size = len(file_list[key])
     
