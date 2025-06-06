@@ -85,6 +85,7 @@ show_code = config['app']['show_code']
 buzzer_pin = config['pi_pins']['buzzer']
 version_app = config['app']['version']
 openByCode = config['app']['openByCode']
+openByBadge = config['app']['openByBadge']
 _settingsCode = config['app']['settingsCode']
 pwdRST = config['app']['pwdRST']
 settingsMode = False
@@ -1670,6 +1671,12 @@ def simResponse(timer):
                     elif msg[0] == 'uploadNFC':
                         uploadCurrentStatus('nfc')
                         return
+
+                    elif msg[0] == 'getHouseNFC':
+                        tags = [{'casa':msg[2]}]
+                        tags.append(jsonTools.updJson('r', 'nfc.json','house', msg[2], '' ,True))
+                        sendSMS(str(tags))
+                        return
                     
                     elif msg[0] == 'blockExtrange':
                         if not jsonTools.updJson('r', 'restraint.json','user', 'sim', msg[3], False):
@@ -1816,8 +1823,9 @@ def tagResponse(timer):
                 lastTag = decoded
 
                 if debugging:
-                    print('Tad Id: ', decoded)
-     # region Enter to settings mode by NFC admin -----------------
+                    print('Tag Id: ' + str(decoded) + ', Module: ' + openByBadge)
+
+                # region Enter to settings mode by NFC admin -----------------
                 if code[0:1] == '#' and decoded == adminBadge:
                     readyToConfig = True
                     settingsMode = True
@@ -1830,7 +1838,35 @@ def tagResponse(timer):
                     code = ''
                     settingsCode = ''
                     return
-                # endregion  --------------------
+                
+                # endregion  -------------------------------------------
+                
+                #Open access by Badge -------------------------
+                else:
+                    
+                    tag = jsonTools.updJson('r', 'nfc.json','house','', str(decoded) ,True)
+                    if tag :
+                        lastTag = ''
+                        if openByBadge == 'magnet':
+                            if debugging:  
+                                print('Open magnet')
+                            magnet.Activate()
+                        elif openByBadge == 'gate':
+                            if debugging:  
+                                print('Open gate')
+                            gate.Activate()
+
+                        utime.sleep(2)
+                    else:
+                        if debugging:
+                            print('Badge Not found ... ')
+
+
+                    return
+                
+                #endregion  --------------------------
+
+    # region
 
         # Verify if settings mode is ready  ------------
                 if settingsMode != '' and readyToConfig == True :
@@ -2145,7 +2181,7 @@ try:
 
         timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
 
-        timerRDM6300.init(freq=2, mode=Timer.PERIODIC, callback=tagResponse)
+        timerRDM6300.init(period=2000, callback=tagResponse)
 
         # endregion -------------------------------------
 
