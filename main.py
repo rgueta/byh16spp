@@ -9,6 +9,7 @@ import gate
 import initSetup
 import jsonTools
 import math
+import time
 
 import tools
 
@@ -121,6 +122,8 @@ nfc = UART(1, nfc_baud, tx=Pin(nfc_tx), rx=Pin(nfc_rx))
 lastTag = 0
 scanningNFC = ''
 nfcHouse = ''
+nfcLastRead = 0
+nfcDebounceTime = 10000 #milliseconds
 
 # Setup codes json file
 code_list = {}
@@ -627,14 +630,16 @@ def correctTime(timestamp):
     OkTime = False
     if(len(timestamp) > 0):
         local =  utime.localtime()
-        print('LOCAL time: ', utime.mktime(local))
+        if debugging:
+            print('LOCAL time: ', utime.mktime(local))
         # now = utime.time()
         now = utime.mktime(local)
         tspkg = 0
         tspkg = int(timestamp[:10])
         diff = now - tspkg
-        print('tspkg : ', tspkg)
-        print('DIFF time: ', diff)
+        if debugging:
+            print('tspkg : ', tspkg)
+            print('DIFF time: ', diff)
         if (diff < 90 and diff > 0):
             OkTime = True
     
@@ -1812,18 +1817,25 @@ def tagResponse(timer):
     global readyToConfig
     global scanningNFC
     global code
+    global nfcLastRead
 
     if nfc.any():
         try:
             ID = ''
+            current_time = time.ticks_ms()
+            diff = time.ticks_diff(current_time, nfcLastRead)
             readByte = nfc.read()
             pass
             decoded = int(readByte[3:11].decode('utf-8'),16)
+            if diff > nfcDebounceTime:
+                lastTag = ''
+
             if lastTag != decoded:
                 lastTag = decoded
 
-                if debugging:
-                    print('Tag Id: ' + str(decoded) + ', Module: ' + openByBadge)
+                # Verify if settings mode is ready  ------------
+                if settingsMode != '' and readyToConfig == True :
+                    printHeaderNFC(decoded)
 
                 # region Enter to settings mode by NFC admin -----------------
                 if code[0:1] == '#' and decoded == adminBadge:
@@ -1842,40 +1854,31 @@ def tagResponse(timer):
                 # endregion  -------------------------------------------
                 
                 #Open access by Badge -------------------------
-                else:
-                    
-                    tag = jsonTools.updJson('r', 'nfc.json','house','', str(decoded) ,True)
-                    if tag :
-                        lastTag = ''
-                        if openByBadge == 'magnet':
-                            if debugging:  
-                                print('Open magnet')
-                            magnet.Activate()
-                        elif openByBadge == 'gate':
-                            if debugging:  
-                                print('Open gate')
-                            gate.Activate()
-
-                        utime.sleep(2)
-                    else:
+                else: 
+                    if settingsMode == False and readyToConfig == False:
                         if debugging:
-                            print('Badge Not found ... ')
+                            print('Tag Id: ' + str(decoded) + ', Module to open: ' + openByBadge)
+                    
+                        tag = jsonTools.updJson('r', 'nfc.json','house','', str(decoded) ,True)
+                        if tag :
+                            if openByBadge == 'magnet':
+                                if debugging:  
+                                    print('Open magnet')
+                                magnet.Activate()
+                            elif openByBadge == 'gate':
+                                if debugging:  
+                                    print('Open gate')
+                                gate.Activate()
+                        else:
+                            if debugging:
+                                print('Badge Not found ... ')
 
+            nfcLastRead = current_time
 
-                    return
                 
-                #endregion  --------------------------
-
-    # region
-
-        # Verify if settings mode is ready  ------------
-                if settingsMode != '' and readyToConfig == True :
-                    printHeaderNFC(decoded)
-                
-
         except ValueError as identifier:
             print('Can not read: ', identifier)
-
+            
 # endregion ------ Timers  -----------------------------------
 
 
@@ -2171,7 +2174,7 @@ try:
         timerSim800L = Timer()
 
         # Initialize timer used RDM6300
-        timerRDM6300= Timer()
+        timerRDM6300= Timer(-1)
 
         # Activate blink led
         if debugging:
@@ -2181,7 +2184,7 @@ try:
 
         timerKeypad.init(freq=2, mode=Timer.PERIODIC, callback=PollKeypad)
 
-        timerRDM6300.init(period=2000, callback=tagResponse)
+        timerRDM6300.init(period=100, callback=tagResponse)
 
         # endregion -------------------------------------
 
