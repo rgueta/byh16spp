@@ -949,8 +949,10 @@ def verifyCode(cap_code):
                 # reg_code_event(cap_code)
                 if sim_inserted and sim_ready:
                     reg_code_event(str(item["codeId"]))
-                if debugging:
-                    print("Calling API to store code event")
+                    if debugging:
+                        print("Calling API to store code event")
+                else:
+                    print("SIM no esta presente o listo! ")
             else:
                 event_pkg = {
                     "code": cap_code,
@@ -977,7 +979,7 @@ def verifyCode(cap_code):
 
 
 def reg_code_event(code_id):
-    data = {"codeId": code_id, "picId": "NA", "CoreSim": config["sim"]["value"]}
+    data = {"codeId": code_id, "coreId": coreId, "picId": "NA"}
     url = config["sim"]["url"] + config["sim"]["api_codes_events"]
     jsonLen = len(str(data).encode("utf-8"))
 
