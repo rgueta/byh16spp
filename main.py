@@ -22,6 +22,7 @@ import gate
 import initSetup
 import jsonTools
 import magnet
+import tones
 import tools
 
 # region Memory status  ----------------------
@@ -121,6 +122,8 @@ sim_check_done = False
 
 # ----- Intialization -----------
 buzzer = PWM(Pin(buzzer_pin))
+tones.beeper = tones.init_buzzer(buzzer, default_volume=35000)  # ~50-70% volumen
+
 if debugging:
     print("Version " + version_app)
 
@@ -267,19 +270,6 @@ def changeSetting(value):
 
 # endregion
 
-# initial gprs configuration
-# def gsm_config_gprs():
-#     print(" --- CONFIG GPRS --- ");
-#     gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
-#     utime.sleep(1)
-#
-#     # global keepMonitorSIM800L
-#     instr = 'AT+SAPBR=3,1,"APN","%s"\r\n' % apn
-#     gsm.write(instr.encode())
-#     utime.sleep(1)
-
-# endregion  -------------------------------------
-
 
 def signal_Status(titulo):
     global gsm_status
@@ -305,6 +295,141 @@ def str_to_bool(s):
 
 
 # region ----------  show on display ------------------
+
+
+# ---- =====    DISPLAY SECTION  ===================
+def display_processing(message, duration=None):
+    """Muestra mensaje de procesamiento con animación
+
+    Args:
+        message: Mensaje a mostrar
+        duration: Duración en segundos (si es None, muestra hasta llamar a hide_processing)
+
+    Returns:
+        Función para ocultar el mensaje
+    """
+    import gc
+
+    class ProcessingAnimator:
+        def __init__(self, oled, msg):
+            self.oled = oled
+            self.msg = msg
+            self.running = True
+            self.frame = 0
+            self.frames = ["   ", ".  ", ".. ", "..."]
+
+        def update(self):
+            if self.running:
+                self.oled.fill(0)
+                self.oled.text(self.msg + self.frames[self.frame % 4], 1, 10)
+                self.oled.show()
+                self.frame += 1
+
+        def stop(self):
+            self.running = False
+            self.oled.fill(0)
+            self.oled.show()
+
+    anim = ProcessingAnimator(oled1, message)
+    start = utime.time()
+
+    while duration is None or utime.time() - start < duration:
+        anim.update()
+        utime.sleep(0.2)
+        if duration is None and not anim.running:
+            break
+
+    if duration is not None:
+        anim.stop()
+        return None
+    else:
+        return anim.stop
+
+
+def display_animated(
+    msg, steps=4, step_duration=0.9, final_duration=0, return_to_main=True
+):
+    """Muestra mensaje animado con puntos progresivos
+
+    Args:
+        msg: Mensaje a mostrar
+        steps: Número de pasos de animación (puntos)
+        step_duration: Duración entre cada paso
+        final_duration: Duración adicional al final
+        return_to_main: Si True, vuelve a la pantalla principal
+    """
+    oled1.fill(0)
+    oled1.text(msg, 1, 0)
+    oled1.show()
+
+    for i in range(1, steps + 1):
+        utime.sleep(step_duration)
+        dots = "." * i
+        oled1.fill(0)
+        oled1.text(msg + dots, 1, 0)
+        oled1.show()
+
+    if final_duration > 0:
+        utime.sleep(final_duration)
+
+    if return_to_main:
+        ShowMainFrame()
+
+
+def show_boot_message(msg, duration=3):
+    """Muestra mensaje de inicio/boot (versión mejorada de showVersion)"""
+    display_animated(
+        msg, steps=3, step_duration=0.8, final_duration=duration, return_to_main=False
+    )
+
+
+def display_loading(message="Procesando", callback=None, *args, **kwargs):
+    """Muestra mensaje de carga mientras ejecuta un proceso
+
+    Args:
+        message: Mensaje a mostrar durante el proceso
+        callback: Función a ejecutar mientras se muestra la animación
+        *args, **kwargs: Argumentos para el callback
+
+    Returns:
+        El resultado del callback
+    """
+    # Mostrar mensaje inicial
+    oled1.fill(0)
+    oled1.text(message, 1, 10)
+    oled1.show()
+
+    result = None
+    frame = 0
+    frames = ["   ", ".  ", ".. ", "..."]
+
+    start_time = utime.time()
+
+    # Si hay callback, ejecutarlo mientras se anima
+    if callback:
+        # Ejecutar callback en un bloque try/except
+        try:
+            result = callback(*args, **kwargs)
+        except Exception as e:
+            oled1.fill(0)
+            oled1.text("Error:", 1, 10)
+            oled1.text(str(e)[:16], 1, 20)
+            oled1.show()
+            utime.sleep(2)
+            raise e
+
+    # Animación final rápida
+    for _ in range(8):
+        oled1.fill(0)
+        oled1.text(message + frames[frame % 4], 1, 10)
+        oled1.show()
+        frame += 1
+        utime.sleep(0.15)
+
+    # Pequeña pausa antes de continuar
+    utime.sleep(0.5)
+
+    return result
 
 
 def DisplayMsg(msg, time=3):
@@ -425,7 +550,7 @@ def printHeaderNFC(tag=None):
             else:
                 scanningNFC = ""
                 oled1.text(" falta # casa", 1, 24)
-                song("fail")
+                tones.beeper.error()
                 oled1.show()
                 utime.sleep(5)
                 printHeaderSettings()
@@ -434,7 +559,7 @@ def printHeaderNFC(tag=None):
         elif scanningNFC == "deleteHouse":
             if nfcHouse == "":
                 oled1.text(" falta # casa", 1, 24)
-                song("fail")
+                tones.beeper.error()
                 oled1.show()
                 utime.sleep(5)
                 printHeaderSettings()
@@ -475,7 +600,7 @@ def printHeaderNFC(tag=None):
                         "casa " + nfcHouse + "[" + str(tagCount) + "]," + tmp1, 0, 10
                     )
                     oled1.text(tmp2, 0, 24)
-                    song("ok")
+                    tones.beeper.success()
                     oled1.show()
                     utime.sleep(4)
                     scanningNFC = ""
@@ -517,7 +642,7 @@ def printHeaderNFC(tag=None):
                 jsonTools.updJson("c", "nfc.json", "house", nfcHouse, str(tag))
                 oled1.text(str(tag), 0, 12)
                 oled1.text("Agregado !", 1, 24)
-                song("ok")
+                tones.beeper.success()
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
@@ -528,7 +653,7 @@ def printHeaderNFC(tag=None):
 
                 oled1.text("Ya existe!", 1, 10)
                 oled1.text("Codigo:" + str(tag), 1, 24)
-                song("fail")
+                tones.beeper.error()
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
@@ -542,7 +667,7 @@ def printHeaderNFC(tag=None):
 
                 oled1.text("borrado !", 1, 10)
                 oled1.text("Codigo:" + str(tag), 1, 24)
-                song("ok")
+                tones.beeper.success()
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
@@ -553,7 +678,7 @@ def printHeaderNFC(tag=None):
                     print(str(tag) + ", No existe")
                 oled1.text("No existe !", 1, 10)
                 oled1.text("Codigo:" + str(tag), 1, 24)
-                song("fail")
+                tones.beeper.error()
                 oled1.show()
                 utime.sleep(4)
                 printHeaderNFC()
@@ -569,7 +694,7 @@ def printHeaderNFC(tag=None):
                     print("Tag: {}, found at house: {}".format(str(tag), house))
 
                 oled1.text("es de casa: " + house, 1, 24)
-                song("ok")
+                tones.beeper.success()
                 oled1.show()
                 return
             else:
@@ -577,7 +702,7 @@ def printHeaderNFC(tag=None):
                     print("Tag not found")
 
                 oled1.text("no existe!", 1, 24)
-                song("ok")
+                tones.beeper.success()
                 oled1.show()
                 return
 
@@ -586,7 +711,7 @@ def printHeaderNFC(tag=None):
                 print("Codigo: ", str(tag))
             oled1.text("Leer nfc", 1, 10)
             oled1.text("Codigo:" + str(tag), 1, 24)
-            song("ok")
+            tones.beeper.success()
             oled1.show()
             return
 
@@ -672,21 +797,42 @@ def postData(type=1, data=any, lenght=0, url=""):
 
 
 def correctTime(timestamp):
+    """Verifica si el timestamp está dentro de un rango válido (90 segundos)"""
     OkTime = False
-    if len(timestamp) > 0:
-        local = utime.localtime()
+
+    # Verificar que timestamp no sea None o vacío
+    if not timestamp or timestamp == "":
         if debugging:
-            print("LOCAL time: ", utime.mktime(local))
-        # now = utime.time()
-        now = utime.mktime(local)
-        tspkg = 0
-        tspkg = int(timestamp[:10])
+            print("correctTime: timestamp vacío")
+        return False
+
+    try:
+        # Convertir a string y limpiar
+        ts_str = str(timestamp).strip().strip("\"'")
+
+        # Extraer solo los primeros 10 dígitos (timestamp Unix)
+        digits_only = "".join(c for c in ts_str if c.isdigit())
+
+        if len(digits_only) >= 10:
+            tspkg = int(digits_only[:10])
+        else:
+            # Si no hay suficientes dígitos, intentar convertir directamente
+            tspkg = int(float(ts_str)) if "." in ts_str else int(ts_str)
+
+        # Obtener tiempo local
+        now = utime.mktime(utime.localtime())
         diff = now - tspkg
+
         if debugging:
-            print("tspkg : ", tspkg)
-            print("DIFF time: ", diff)
-        if diff < 90 and diff > 0:
+            print(f"correctTime - tspkg: {tspkg}, now: {now}, diff: {diff}")
+
+        if 0 <= diff <= 90:
             OkTime = True
+
+    except (ValueError, TypeError) as e:
+        if debugging:
+            print(f"correctTime - Error: {e} para timestamp: '{timestamp}'")
+        OkTime = False
 
     return OkTime
 
@@ -726,45 +872,143 @@ def init_gsm():
     global sim_inserted, sim_ready, sim_check_done
     global gsm
 
+    print("Inicializando GSM...")
+
     # Inicializar variables SIM
     sim_inserted = False
     sim_ready = False
     sim_check_done = False
 
-    # Verificar SIM
+    # Limpiar buffer UART
+    utime.sleep(1)
+    while gsm.any():
+        gsm.read()  # Sin argumentos en MicroPython
+
+    # Probar comunicación básica
+    gsm.write("AT\r\n")
+    utime.sleep(1)
+
+    # Verificar respuesta
+    response = ""
+    if gsm.any():
+        # Leer sin decode, solo bytes
+        raw_response = gsm.read()
+        if raw_response:
+            try:
+                response = raw_response.decode("utf-8")
+            except:
+                response = str(raw_response)
+        if "OK" not in response:
+            print("⚠️ Módulo GSM no responde a AT")
+            return False
+    else:
+        print("⚠️ No hay respuesta del módulo GSM")
+        return False
+
+    print("✅ Comunicación GSM establecida")
+
+    # Verificar SIM (método directo sin depender del timer)
+    print("Verificando SIM...")
     gsm.write("AT+CPIN?\r\n")
     utime.sleep(2)
 
-    # Esperar SIM lista
-    if not wait_for_sim():
-        print("Error crítico: SIM no disponible")
+    # Leer respuesta directamente
+    response = ""
+    timeout_start = utime.time()
+    while utime.time() - timeout_start < 3:  # Timeout 3 segundos
+        while gsm.any():
+            raw_byte = gsm.read()
+            if raw_byte:
+                try:
+                    response += raw_byte.decode("utf-8")
+                except:
+                    # Si no se puede decodificar, agregar como está
+                    response += str(raw_byte)
+            utime.sleep(0.05)
+        utime.sleep(0.1)
+
+    print(f"Respuesta AT+CPIN?: {response}")
+
+    # Analizar respuesta directamente
+    if "+CPIN: READY" in response:
+        sim_inserted = True
+        sim_ready = True
+        sim_check_done = True
+        print("✅ SIM insertada y lista")
+    elif "+CPIN: SIM PIN" in response:
+        sim_inserted = True
+        sim_ready = False
+        sim_check_done = True
+        print("⚠️ SIM requiere PIN - usar AT+CPIN=xxxx")
         return False
+    elif "SIM not inserted" in response or "+CME ERROR: 10" in response:
+        sim_inserted = False
+        sim_ready = False
+        sim_check_done = True
+        print("❌ SIM no insertada")
+        return False
+    else:
+        print(f"⚠️ Respuesta inesperada: {response}")
+        # Podría ser que ya está registrada, intentar con AT+CREG?
+        gsm.write("AT+CREG?\r\n")
+        utime.sleep(1)
+        reg_response = ""
+        while gsm.any():
+            reg_response += gsm.read().decode("utf-8", errors="ignore")
+        if "+CREG: 0,1" in reg_response or "+CREG: 0,5" in reg_response:
+            print("✅ Módulo registrado en red, asumiendo SIM presente")
+            sim_inserted = True
+            sim_ready = True
+            sim_check_done = True
+        else:
+            sim_inserted = True  # Asumir que sí está para continuar
+            sim_ready = True
 
-    # gsm.write('ATE0\r')    # Disable the Echo
-    # utime.sleep(0.5)
-    apn_usr = config["sim"]["APN_USER"]
-    apn_pwd = config["sim"]["APN_PWD"]
-    gsm.write('AT+CSTT="%s","%s","%s"\r' % (apn, apn_usr, apn_pwd))
-    utime.sleep(1)
-    gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r')
-    utime.sleep(1)
-    gsm.write('AT+SAPBR=3,1,"APN","%s"\r' % apn)
-    utime.sleep(1)
+    # Configurar GPRS solo si SIM está lista
+    if sim_ready:
+        print("Configurando GPRS...")
 
-    gsm.write("AT+CMGF=1\r")  # Select Message format as Text mode
-    utime.sleep(1)
-    gsm.write("AT+CNMI=2,2,0,0,0\r")  # New live SMS Message Indications
-    utime.sleep(1)
+        # Desactivar eco
+        gsm.write("ATE0\r\n")
+        utime.sleep(0.5)
 
-    # gsm.write('AT+CGATT?\r\n')
-    # utime.sleep(1)
+        # Limpiar buffer
+        while gsm.any():
+            gsm.read()
 
-    if not incoming_calls:
-        gsm.write("AT+GSMBUSY=1\r")
+        # Configurar APN
+        apn_usr = config["sim"].get("APN_USER", "")
+        apn_pwd = config["sim"].get("APN_PWD", "")
+        apn = config["sim"]["apn"]
+
+        # Enviar comandos uno por uno con pausas
+        cmd = f'AT+CSTT="{apn}","{apn_usr}","{apn_pwd}"\r\n'
+        gsm.write(cmd)
         utime.sleep(1)
 
-    if debugging:
-        print("init_gsm done..")
+        gsm.write('AT+SAPBR=3,1,"Contype","GPRS"\r\n')
+        utime.sleep(1)
+
+        cmd2 = f'AT+SAPBR=3,1,"APN","{apn}"\r\n'
+        gsm.write(cmd2)
+        utime.sleep(1)
+
+        # Configurar SMS
+        gsm.write("AT+CMGF=1\r\n")
+        utime.sleep(1)
+        gsm.write("AT+CNMI=2,2,0,0,0\r\n")
+        utime.sleep(1)
+
+        # Bloquear llamadas si está configurado
+        if not incoming_calls:
+            gsm.write("AT+GSMBUSY=1\r\n")
+            utime.sleep(1)
+
+        print("✅ GSM inicializado correctamente")
+        return True
+    else:
+        print("❌ GSM no inicializado - SIM no lista")
+        return False
 
 
 def getPhoneNum():
@@ -937,7 +1181,7 @@ def verifyCode(cap_code):
     global code
     for i, item in enumerate(active_codes["codes"]):
         if cap_code == item["code"]:
-            song("ok")
+            tones.beeper.success()
             ShowMainFrame()
             code = ""
             if openByCode == "magnet":
@@ -973,7 +1217,7 @@ def verifyCode(cap_code):
             global warning_message_active
             print("codigo no valido!")
             warning_message_active = True
-            song("fail")
+            tones.beeper.error()
             ShowMainFrame()
             code = ""
 
@@ -1134,7 +1378,7 @@ def PollKeypad(timer):
                         oled1.fill(0)
                         oled1.text("Cancelado !", 1, 10)
                         oled1.show()
-                        song("fail")
+                        tones.beeper.error()
                         utime.sleep(4)
                         scanningNFC = ""
                         printHeaderNFC()
@@ -1148,7 +1392,7 @@ def PollKeypad(timer):
                                 oled1.text("Borrados !", 1, 10)
                                 oled1.text("casa : " + nfcHouse, 1, 24)
                                 oled1.show()
-                                song("ok")
+                                tones.beeper.success()
                                 utime.sleep(4)
                                 if debugging:
                                     print("house: " + nfcHouse + " deleted")
@@ -1158,7 +1402,7 @@ def PollKeypad(timer):
                                 oled1.text("No Borrados !", 1, 10)
                                 oled1.text("casa : " + nfcHouse, 1, 24)
                                 oled1.show()
-                                song("fail")
+                                tones.beeper.error()
                                 utime.sleep(4)
                                 scanningNFC = ""
                             printHeaderSettings()
@@ -1178,7 +1422,7 @@ def PollKeypad(timer):
                             else:
                                 oled1.text("No Borrados !", 1, 10)
                                 oled1.show()
-                                song("fail")
+                                tones.beeper.error()
                                 utime.sleep(4)
                                 scanningNFC = ""
                             printHeaderSettings()
@@ -1219,7 +1463,7 @@ def PollKeypad(timer):
                         printHeaderSettings()
                         oled1.text("exit settings", 1, 24)
                         oled1.show()
-                        song("ok")
+                        tones.beeper.success()
                         utime.sleep(3)
                         printHeader()
                         oled1.text("Codigo:           ", 1, 24)
@@ -1359,7 +1603,7 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Pwd: Error         ", 1, 24)
                             oled1.show()
-                            song("fail")
+                            tones.beeper.error()
                             utime.sleep(3)
                             printHeaderSettings()
                             oled1.text("Pwd:         ", 1, 24)
@@ -1395,7 +1639,7 @@ def PollKeypad(timer):
                             oled1.text("code " + code, 3, 22)
                             oled1.show()
                             utime.sleep(4)
-                            song("fail")
+                            tones.beeper.error()
                             oled1.fill(0)
                             printHeaderSettings()
                             oled1.text("Code:   ", 1, 24)
@@ -1430,7 +1674,7 @@ def PollKeypad(timer):
                             printHeaderSettings()
                             oled1.text("Pwd: Error         ", 1, 24)
                             oled1.show()
-                            song("fail")
+                            tones.beeper.error()
                             utime.sleep(3)
                             printHeaderSettings()
                             oled1.text("Pwd:         ", 1, 24)
@@ -1460,7 +1704,7 @@ def PollKeypad(timer):
                         printHeader()
                         oled1.text("Incompleto", 5, 22)
                         oled1.show()
-                        song("fail")
+                        tones.beeper.error()
                         utime.sleep(3)
                         printHeader()
                         if show_code:
@@ -2228,6 +2472,7 @@ def tagResponse(timer):
                             elif openByBadge == "gate":
                                 if debugging:
                                     print("Open gate")
+                                    tones.beeper.success()
                                 gate.Activate()
                         else:
                             if debugging:
@@ -2379,18 +2624,46 @@ def check_sim_status():
 
 def wait_for_sim(timeout=30):
     """Espera a que la SIM esté lista, timeout en segundos"""
-    start = utime.time()
-    while utime.time() - start < timeout:
-        gsm.write("AT+CPIN?\r\n")
-        utime.sleep(2)
+    global sim_inserted, sim_ready, sim_check_done
 
-        if "sim_ready" in globals() and sim_ready:
+    start = utime.time()
+    print("Esperando respuesta de la SIM...")
+
+    # Enviar comando inicial
+    gsm.write("AT+CPIN?\r\n")
+
+    while utime.time() - start < timeout:
+        # Verificar si ya tenemos la respuesta
+        if sim_ready:
             print("✅ SIM lista para usar")
             return True
 
-        if "sim_inserted" in globals() and not sim_inserted:
-            print("❌ SIM no insertada")
+        if sim_check_done and not sim_inserted:
+            print("❌ SIM no insertada detectada")
             return False
+
+        # Reenviar comando cada 3 segundos si no hay respuesta
+        elapsed = utime.time() - start
+        if elapsed > 0 and elapsed % 3 == 0 and elapsed < (timeout - 1):
+            gsm.write("AT+CPIN?\r\n")
+            print("Reenviando AT+CPIN?...")
+
+        # Leer cualquier respuesta que pueda haber llegado
+        while gsm.any():
+            raw = gsm.read()
+            if raw:
+                try:
+                    resp = raw.decode("utf-8")
+                    if "+CPIN: READY" in resp:
+                        sim_ready = True
+                        sim_inserted = True
+                        sim_check_done = True
+                        print("✅ SIM lista (detectada por lectura directa)")
+                        return True
+                except:
+                    pass
+
+        utime.sleep(0.5)
 
     print("⏰ Timeout esperando SIM")
     return False
@@ -2587,7 +2860,19 @@ try:
         InitKeypad()
 
         # -------  SETUP GSM device  -------------------
-        init_gsm()
+        #
+        #
+
+        display_loading("Verificando SIM", init_gsm)
+        # if not init_gsm():
+        #     print("⚠️ Error en inicialización GSM, continuando sin GSM...")
+        #     # Opcional: mostrar mensaje en OLED
+        #     oled1.fill(0)
+        #     oled1.text("Error GSM", 20, 15)
+        #     oled1.text("Sin SIM", 25, 25)
+        #     oled1.show()
+        # else:
+        #     print("✅ GSM listo")
 
         # Initialize timer Used for polling keypad
         timerKeypad = Timer()
@@ -2614,8 +2899,11 @@ try:
         rtc = RTC()
         rtc_date = RTC().datetime()
 
+        show_boot_message("Iniciando", duration=2)
         initial()
-        song("initial")
+        display_processing("Conectando red", duration=3)
+        ShowMainFrame()
+        tones.beeper.melody_initial()
 
     diskUsage()
     memUsage()
